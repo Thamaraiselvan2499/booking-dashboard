@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Booking Comparison Dashboard — Live from Zoho</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Roboto,system-ui,sans-serif}
@@ -25,6 +26,8 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .btn-sync{background:#2563eb;border:none;color:#fff;padding:8px 24px;border-radius:40px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
 .btn-sync:hover{background:#1d4ed8}
 .btn-sync:disabled{background:#94a3b8;cursor:not-allowed}
+.btn-excel{background:#16a34a;border:none;color:#fff;padding:8px 20px;border-radius:40px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+.btn-excel:hover{background:#15803d}
 .sync-status{font-size:12px;color:#16a34a;display:flex;align-items:center;gap:6px}
 .sync-status.error{color:#dc2626}
 .sync-status.syncing{color:#2563eb}
@@ -32,6 +35,10 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .date-nav{background:#fff;border-radius:18px;padding:14px 20px;margin-bottom:20px;border:1px solid #eef2f6;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;box-shadow:0 2px 6px rgba(0,0,0,.02)}
 .date-nav .label{font-weight:600;color:#0b1a33;font-size:13px;display:flex;align-items:center;gap:8px}
 .date-nav .label i{color:#2563eb}
+.view-toggle{display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:40px}
+.view-btn{padding:6px 18px;border:none;border-radius:40px;background:transparent;font-size:12px;font-weight:500;color:#475569;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.view-btn:hover{background:#e2e8f0}
+.view-btn.active{background:#fff;color:#0b1a33;box-shadow:0 2px 4px rgba(0,0,0,.06)}
 .date-buttons{display:flex;flex-wrap:wrap;gap:8px}
 .date-btn{padding:5px 14px;border-radius:40px;border:1px solid #d1d9e6;background:#f8fafc;font-size:12px;color:#475569;cursor:pointer;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .date-btn:hover{background:#e2e8f0}
@@ -50,6 +57,10 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .comparison-banner .vs{font-size:20px;font-weight:800;opacity:.6;letter-spacing:2px;flex-shrink:0}
 .comparison-banner .compare-select{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:14px;font-weight:600;padding:4px 12px;border-radius:20px;outline:none;cursor:pointer;font-family:inherit;margin-left:6px}
 .comparison-banner .compare-select option{color:#1e293b;background:#fff}
+.overall-banner{background:linear-gradient(135deg,#16a34a,#15803d);border-radius:18px;padding:18px 26px;margin-bottom:20px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;box-shadow:0 4px 14px rgba(22,163,74,.25)}
+.overall-banner .title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px}
+.overall-banner .title i{opacity:.85}
+.overall-banner .info{font-size:13px;opacity:.85;text-align:right}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
 .kpi-card{background:#fff;border-radius:16px;padding:16px 16px 14px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:.15s}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.06)}
@@ -60,6 +71,7 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .kpi-card .delta.up{background:#dcfce7;color:#15803d}
 .kpi-card .delta.down{background:#fee2e2;color:#b91c1c}
 .kpi-card .delta.same{background:#f1f5f9;color:#64748b}
+.kpi-card .delta.hidden{display:none}
 .kpi-card .delta i{font-size:10px}
 .kpi-card .delta .yest{font-weight:400;color:inherit;opacity:.75;margin-left:3px}
 .kpi-card.blue .label i{color:#2563eb}
@@ -92,6 +104,7 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .summary-table .delta-cell.same{color:#94a3b8}
 .summary-table tbody tr:hover{background:#fafcff}
 .summary-table td.wre-name{font-weight:600;color:#0b1a33}
+.summary-table tr.total-row{background:#f8fafc;font-weight:600}
 .table-wrap{background:#fff;border-radius:16px;border:1px solid #eef2f6;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.03);margin-bottom:20px}
 .table-header{padding:14px 20px 10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid #f1f5f9}
 .table-header h3{font-size:15px;font-weight:600;color:#0b1a33}
@@ -142,6 +155,7 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
   .comparison-banner .side.right .date-line{justify-content:center}
   .table-tabs{margin:10px 12px;width:calc(100% - 24px)}
   .tab-btn{flex:1;justify-content:center;font-size:11px;padding:6px 10px}
+  .view-toggle{width:100%;justify-content:center}
 }
 </style>
 </head>
@@ -162,20 +176,28 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
   <section class="sync-section">
     <span class="sync-label"><i class="fas fa-cloud-download-alt"></i> Live from Zoho Sheet</span>
     <button class="btn-sync" id="syncBtn"><i class="fas fa-sync-alt"></i> Sync Now</button>
+    <button class="btn-excel" id="excelBtn"><i class="fas fa-file-excel"></i> Download Excel</button>
     <span class="sync-status" id="syncStatus"></span>
     <span class="last-sync">Last sync: <span id="lastSync">—</span></span>
   </section>
 
   <nav class="date-nav">
-    <span class="label"><i class="fas fa-calendar-day"></i> Available Dates</span>
-    <div class="date-buttons" id="dateButtons">
-      <span class="no-data-msg" style="padding:0;font-size:12px;color:#94a3b8;">Waiting for data...</span>
+    <span class="label"><i class="fas fa-calendar-day"></i> View</span>
+    <div class="view-toggle" id="viewToggle">
+      <button class="view-btn active" data-view="byDate"><i class="fas fa-columns"></i> By Date</button>
+      <button class="view-btn" data-view="overall"><i class="fas fa-layer-group"></i> Overall Report</button>
     </div>
-    <div class="date-picker-wrap">
-      <input type="date" id="jumpToDate" />
+    <div id="dateSection" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;">
+      <div class="date-buttons" id="dateButtons">
+        <span class="no-data-msg" style="padding:0;font-size:12px;color:#94a3b8;">Waiting for data...</span>
+      </div>
+      <div class="date-picker-wrap">
+        <input type="date" id="jumpToDate" />
+      </div>
     </div>
   </nav>
 
+  <!-- BY DATE MODE: Comparison banner -->
   <div class="comparison-banner" id="comparisonBanner" style="display:none;">
     <div class="side">
       <div class="date-line">
@@ -193,6 +215,12 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
     </div>
   </div>
 
+  <!-- OVERALL MODE: Green banner -->
+  <div class="overall-banner" id="overallBanner" style="display:none;">
+    <div class="title"><i class="fas fa-layer-group"></i> Overall Report — All Dates</div>
+    <div class="info" id="overallInfo">—</div>
+  </div>
+
   <section class="kpi-grid" id="kpiGrid">
     <div class="kpi-card blue"><div class="label"><i class="fas fa-ticket-alt"></i> Total Bookings</div><div class="value" id="kpiTotal">0</div><div class="delta same" id="dTotal"><i class="fas fa-minus"></i> 0</div></div>
     <div class="kpi-card green"><div class="label"><i class="fas fa-check-circle"></i> Accepted (In Flow)</div><div class="value" id="kpiAccepted">0</div><div class="delta same" id="dAccepted"><i class="fas fa-minus"></i> 0</div></div>
@@ -204,12 +232,13 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
   </section>
 
   <div class="chart-row">
-    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Booking Status — Current vs Comparison</div><div class="chart-wrap"><canvas id="chartStatus"></canvas></div></div>
-    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Pickup Status — Current vs Comparison</div><div class="chart-wrap"><canvas id="chartPickup"></canvas></div></div>
-    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Check-in Status — Current vs Comparison</div><div class="chart-wrap"><canvas id="chartCheckin"></canvas></div></div>
-    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Top Garages (Current)</div><div class="chart-wrap"><canvas id="chartGarage"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Booking Status <span id="chartStatusLabel"></span></div><div class="chart-wrap"><canvas id="chartStatus"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Pickup Status <span id="chartPickupLabel"></span></div><div class="chart-wrap"><canvas id="chartPickup"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Check-in Status <span id="chartCheckinLabel"></span></div><div class="chart-wrap"><canvas id="chartCheckin"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Top Garages</div><div class="chart-wrap"><canvas id="chartGarage"></canvas></div></div>
   </div>
 
+  <!-- BY DATE: Metric Comparison -->
   <div class="summary-wrap" id="summaryWrap" style="display:none;">
     <div class="summary-header">
       <h3><i class="fas fa-balance-scale"></i> Metric Comparison</h3>
@@ -220,6 +249,7 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
     </table>
   </div>
 
+  <!-- WRE Summary (both modes) -->
   <div class="summary-wrap" id="wreSummaryWrap" style="display:none;">
     <div class="summary-header">
       <h3><i class="fas fa-users"></i> WRE Summary</h3>
@@ -228,6 +258,29 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
     <table class="summary-table">
       <thead><tr><th>WRE Responsible</th><th id="thWreCur">Current</th><th id="thWrePrev">Comparison</th><th>Change</th></tr></thead>
       <tbody id="wreSummaryBody"></tbody>
+    </table>
+  </div>
+
+  <!-- OVERALL MODE: Per-date summary table -->
+  <div class="summary-wrap" id="overallSummaryWrap" style="display:none;">
+    <div class="summary-header">
+      <h3><i class="fas fa-table"></i> Per-Date Breakdown</h3>
+      <span class="table-count" id="overallSummaryCount">—</span>
+    </div>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Total</th>
+          <th>In Flow</th>
+          <th>Requested</th>
+          <th>Picked Up</th>
+          <th>Not Yet</th>
+          <th>Checked-in</th>
+          <th>Pending</th>
+        </tr>
+      </thead>
+      <tbody id="overallSummaryBody"></tbody>
     </table>
   </div>
 
@@ -277,6 +330,7 @@ let wreMapping = {};
 let selectedDate = null;
 let comparisonDate = null;
 let currentTab = 'all';
+let viewMode = 'byDate'; // 'byDate' | 'overall'
 let charts = {};
 let syncTimer = null;
 
@@ -294,7 +348,6 @@ function fmtDateShort(str){
   const d = new Date(p[0], p[1]-1, p[2]);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
-
 function excelSerialToDateKey(serial){
   const num = Number(serial);
   if(!isFinite(num)) return null;
@@ -305,7 +358,6 @@ function excelSerialToDateKey(serial){
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-
 function toDateKey(val){
   if(val===null || val===undefined || val==='') return null;
   if(val instanceof Date){
@@ -321,7 +373,6 @@ function toDateKey(val){
   if(!isNaN(d)) return d.toISOString().split('T')[0];
   return null;
 }
-
 function getStatusClass(val,type){
   if(type==='status'){
     if(val==='In Booking Flow') return 'flow';
@@ -337,7 +388,6 @@ function getStatusClass(val,type){
   }
   return '';
 }
-
 function normalizeGarage(name){
   if(!name) return '';
   let s = String(name).toLowerCase().replace(/[^a-z0-9]/g,'').trim();
@@ -423,9 +473,13 @@ async function syncFromZoho(){
 
     if(dates.length){
       const latest = dates[dates.length - 1];
-      selectDate(dates.includes(selectedDate) ? selectedDate : latest);
-    } else {
-      document.getElementById('headerSub').textContent = 'No records returned from Zoho';
+      if(!selectedDate || !allData[selectedDate]) selectedDate = latest;
+    }
+
+    if(viewMode === 'overall'){
+      renderOverallView();
+    } else if(selectedDate){
+      selectDate(selectedDate);
     }
 
     clearTimeout(syncTimer);
@@ -453,7 +507,16 @@ function computeMetrics(records){
   };
 }
 
+function getAllRecords(){
+  const out = [];
+  Object.keys(allData).sort().forEach(d => {
+    (allData[d] || []).forEach(r => out.push({ ...r, _dateKey: d }));
+  });
+  return out;
+}
+
 function getCombinedRecords(){
+  if(viewMode === 'overall') return getAllRecords();
   const curRecs  = selectedDate ? (allData[selectedDate] || []) : [];
   const prevRecs = comparisonDate ? (allData[comparisonDate] || []) : [];
   return [
@@ -462,7 +525,7 @@ function getCombinedRecords(){
   ];
 }
 
-function renderKPIs(cur, prev){
+function renderKPIs(cur, prev, isOverall){
   const t = computeMetrics(cur);
   const y = computeMetrics(prev);
   const set = (id, val) => { document.getElementById(id).textContent = val; };
@@ -474,8 +537,9 @@ function renderKPIs(cur, prev){
   set('kpiChecked',   t.checkedIn);
   set('kpiPending',   t.pending);
 
-  const delta = (id, c, p) => {
+  const delta = (id, c, p, hide) => {
     const el = document.getElementById(id);
+    if(hide){ el.className = 'delta hidden'; return; }
     const d = c - p;
     const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'same';
     const arrow = d > 0 ? 'fa-arrow-up' : d < 0 ? 'fa-arrow-down' : 'fa-minus';
@@ -483,13 +547,13 @@ function renderKPIs(cur, prev){
     el.className = 'delta ' + cls;
     el.innerHTML = `<i class="fas ${arrow}"></i> ${sign}${d} <span class="yest">vs ${p}</span>`;
   };
-  delta('dTotal',     t.total,     y.total);
-  delta('dAccepted',  t.accepted,  y.accepted);
-  delta('dRequested', t.requested, y.requested);
-  delta('dPicked',    t.pickedUp,  y.pickedUp);
-  delta('dNotYet',    t.notYet,    y.notYet);
-  delta('dChecked',   t.checkedIn, y.checkedIn);
-  delta('dPending',   t.pending,   y.pending);
+  delta('dTotal',     t.total,     y.total,     isOverall);
+  delta('dAccepted',  t.accepted,  y.accepted,  isOverall);
+  delta('dRequested', t.requested, y.requested, isOverall);
+  delta('dPicked',    t.pickedUp,  y.pickedUp,  isOverall);
+  delta('dNotYet',    t.notYet,    y.notYet,    isOverall);
+  delta('dChecked',   t.checkedIn, y.checkedIn, isOverall);
+  delta('dPending',   t.pending,   y.pending,   isOverall);
 }
 
 function renderSummaryTable(cur, prev){
@@ -523,7 +587,7 @@ function renderSummaryTable(cur, prev){
   document.getElementById('thYesterday').textContent = fmtDateShort(comparisonDate);
 }
 
-function renderWRESummary(cur, prev){
+function renderWRESummary(cur, prev, isOverall){
   const wrap = document.getElementById('wreSummaryWrap');
   if(!Object.keys(wreMapping).length){ wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
@@ -540,32 +604,71 @@ function renderWRESummary(cur, prev){
   const prevMap = groupByWRE(prev);
   const all = Array.from(new Set([...Object.keys(curMap), ...Object.keys(prevMap)])).sort();
 
-  let html = '', totalCur = 0, totalPrev = 0;
-  all.forEach(w => {
-    const c = curMap[w] || 0, p = prevMap[w] || 0;
-    totalCur += c; totalPrev += p;
-    const d = c - p;
-    const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'same';
-    const arrow = d > 0 ? 'fa-arrow-up' : d < 0 ? 'fa-arrow-down' : 'fa-minus';
-    const sign = d > 0 ? '+' : '';
-    const colorCls = w === 'Unmapped' ? 'unmapped' : wreColorClass(w);
-    html += `<tr>
-      <td class="wre-name"><span class="wre-pill ${colorCls}">${w}</span></td>
-      <td>${c}</td><td>${p}</td>
-      <td class="delta-cell ${cls}"><i class="fas ${arrow}" style="font-size:10px;margin-right:4px;"></i>${sign}${d}</td>
+  const thead = wrap.querySelector('thead');
+  if(isOverall){
+    thead.innerHTML = `<tr><th>WRE Responsible</th><th>Total Bookings</th><th>Share</th><th>Top Garage</th></tr>`;
+  } else {
+    thead.innerHTML = `<tr><th>WRE Responsible</th><th id="thWreCur">Current</th><th id="thWrePrev">Comparison</th><th>Change</th></tr>`;
+  }
+
+  const totalCur = Object.values(curMap).reduce((a,b)=>a+b, 0);
+  let html = '';
+  if(isOverall){
+    // Overall: show total + share + top garage
+    all.forEach(w => {
+      const c = curMap[w] || 0;
+      const pct = totalCur ? ((c / totalCur) * 100).toFixed(0) : 0;
+      // Find top garage for this WRE
+      const garages = {};
+      cur.forEach(r => {
+        const rg = getWREForGarage(r.garage) || 'Unmapped';
+        if(rg === w) garages[r.garage] = (garages[r.garage] || 0) + 1;
+      });
+      const topGarage = Object.entries(garages).sort((a,b)=>b[1]-a[1])[0];
+      const colorCls = w === 'Unmapped' ? 'unmapped' : wreColorClass(w);
+      html += `<tr>
+        <td class="wre-name"><span class="wre-pill ${colorCls}">${w}</span></td>
+        <td>${c}</td>
+        <td>${pct}%</td>
+        <td>${topGarage ? `${topGarage[0]} (${topGarage[1]})` : '—'}</td>
+      </tr>`;
+    });
+    html += `<tr class="total-row">
+      <td class="wre-name"><i class="fas fa-sigma" style="margin-right:6px;color:#64748b;font-size:11px;"></i>Total</td>
+      <td>${totalCur}</td>
+      <td>100%</td>
+      <td>—</td>
     </tr>`;
-  });
-  const dTot = totalCur - totalPrev;
-  const totCls = dTot > 0 ? 'up' : dTot < 0 ? 'down' : 'same';
-  const totArrow = dTot > 0 ? 'fa-arrow-up' : dTot < 0 ? 'fa-arrow-down' : 'fa-minus';
-  html += `<tr style="background:#f8fafc;font-weight:600;">
-    <td class="wre-name"><i class="fas fa-sigma" style="margin-right:6px;color:#64748b;font-size:11px;"></i>Total</td>
-    <td>${totalCur}</td><td>${totalPrev}</td>
-    <td class="delta-cell ${totCls}"><i class="fas ${totArrow}" style="font-size:10px;margin-right:4px;"></i>${dTot>0?'+':''}${dTot}</td>
-  </tr>`;
+  } else {
+    let totalPrev = 0;
+    all.forEach(w => {
+      const c = curMap[w] || 0, p = prevMap[w] || 0;
+      totalPrev += p;
+      const d = c - p;
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'same';
+      const arrow = d > 0 ? 'fa-arrow-up' : d < 0 ? 'fa-arrow-down' : 'fa-minus';
+      const sign = d > 0 ? '+' : '';
+      const colorCls = w === 'Unmapped' ? 'unmapped' : wreColorClass(w);
+      html += `<tr>
+        <td class="wre-name"><span class="wre-pill ${colorCls}">${w}</span></td>
+        <td>${c}</td><td>${p}</td>
+        <td class="delta-cell ${cls}"><i class="fas ${arrow}" style="font-size:10px;margin-right:4px;"></i>${sign}${d}</td>
+      </tr>`;
+    });
+    const dTot = totalCur - totalPrev;
+    const totCls = dTot > 0 ? 'up' : dTot < 0 ? 'down' : 'same';
+    const totArrow = dTot > 0 ? 'fa-arrow-up' : dTot < 0 ? 'fa-arrow-down' : 'fa-minus';
+    html += `<tr class="total-row">
+      <td class="wre-name"><i class="fas fa-sigma" style="margin-right:6px;color:#64748b;font-size:11px;"></i>Total</td>
+      <td>${totalCur}</td><td>${totalPrev}</td>
+      <td class="delta-cell ${totCls}"><i class="fas ${totArrow}" style="font-size:10px;margin-right:4px;"></i>${dTot>0?'+':''}${dTot}</td>
+    </tr>`;
+  }
   document.getElementById('wreSummaryBody').innerHTML = html;
-  document.getElementById('thWreCur').textContent  = fmtDateShort(selectedDate);
-  document.getElementById('thWrePrev').textContent = fmtDateShort(comparisonDate);
+  if(!isOverall){
+    document.getElementById('thWreCur').textContent  = fmtDateShort(selectedDate);
+    document.getElementById('thWrePrev').textContent = fmtDateShort(comparisonDate);
+  }
   document.getElementById('wreMappingStatus').textContent = `${all.length} WRE group${all.length!==1?'s':''} • ${Object.keys(wreMapping).length} garage mappings`;
 }
 
@@ -612,19 +715,29 @@ function initCharts(){
     }
   });
 }
-function updateCharts(cur, prev){
+
+function updateCharts(cur, prev, isOverall){
   const s = ['In Booking Flow','Requested'];
   charts.status.data.datasets[0].data = s.map(x => cur.filter(r => r.status === x).length);
-  charts.status.data.datasets[1].data = s.map(x => prev.filter(r => r.status === x).length);
+  charts.status.data.datasets[1].data = isOverall ? [0,0] : s.map(x => prev.filter(r => r.status === x).length);
+  charts.status.data.datasets[1].hidden = isOverall;
+  document.getElementById('chartStatusLabel').textContent = isOverall ? '(All Dates)' : '(Current vs Comparison)';
   charts.status.update();
+
   const pk = ['Picked up','Not yet'];
   charts.pickup.data.datasets[0].data = pk.map(x => cur.filter(r => r.pickup === x).length);
-  charts.pickup.data.datasets[1].data = pk.map(x => prev.filter(r => r.pickup === x).length);
+  charts.pickup.data.datasets[1].data = isOverall ? [0,0] : pk.map(x => prev.filter(r => r.pickup === x).length);
+  charts.pickup.data.datasets[1].hidden = isOverall;
+  document.getElementById('chartPickupLabel').textContent = isOverall ? '(All Dates)' : '(Current vs Comparison)';
   charts.pickup.update();
+
   const ck = ['Checked-in','Pending Check-in'];
   charts.checkin.data.datasets[0].data = ck.map(x => cur.filter(r => r.checkin === x).length);
-  charts.checkin.data.datasets[1].data = ck.map(x => prev.filter(r => r.checkin === x).length);
+  charts.checkin.data.datasets[1].data = isOverall ? [0,0] : ck.map(x => prev.filter(r => r.checkin === x).length);
+  charts.checkin.data.datasets[1].hidden = isOverall;
+  document.getElementById('chartCheckinLabel').textContent = isOverall ? '(All Dates)' : '(Current vs Comparison)';
   charts.checkin.update();
+
   const g = {};
   cur.forEach(r => { g[r.garage] = (g[r.garage] || 0) + 1; });
   const sorted = Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,8);
@@ -649,10 +762,15 @@ function renderDateNav(){
   });
   container.innerHTML = html;
   container.querySelectorAll('.date-btn').forEach(b => {
-    b.addEventListener('click', () => selectDate(b.dataset.date));
+    b.addEventListener('click', () => {
+      if(viewMode !== 'byDate') setViewMode('byDate');
+      selectDate(b.dataset.date);
+    });
   });
-  document.getElementById('jumpToDate').value = selectedDate || '';
+  const jump = document.getElementById('jumpToDate');
+  if(jump) jump.value = selectedDate || '';
 }
+
 function populateCompareWithSelect(){
   const sel = document.getElementById('compareWithSelect');
   const dates = Object.keys(allData).sort();
@@ -668,6 +786,7 @@ function populateCompareWithSelect(){
     sel.value = comparisonDate;
   }
 }
+
 function findPreviousDate(dateStr){
   if(!dateStr) return null;
   const p = dateStr.split('-').map(Number);
@@ -693,13 +812,18 @@ function selectDate(dateStr, explicitCompare){
     comparisonDate = findPreviousDate(dateStr);
   }
 
+  document.getElementById('dateSection').style.display = 'flex';
+  document.getElementById('comparisonBanner').style.display = 'flex';
+  document.getElementById('overallBanner').style.display = 'none';
+  document.getElementById('summaryWrap').style.display = comparisonDate ? 'block' : 'none';
+  document.getElementById('overallSummaryWrap').style.display = 'none';
+
   renderDateNav();
   populateCompareWithSelect();
 
   const cur  = allData[selectedDate] || [];
   const prev = comparisonDate ? (allData[comparisonDate] || []) : [];
 
-  document.getElementById('comparisonBanner').style.display = 'flex';
   document.getElementById('bannerToday').textContent = fmtDate(selectedDate);
   document.getElementById('bannerTodayCount').textContent = `${cur.length} records`;
   if(comparisonDate){
@@ -708,16 +832,10 @@ function selectDate(dateStr, explicitCompare){
     document.getElementById('bannerYesterdayCount').textContent = 'No comparison date';
   }
 
-  renderKPIs(cur, prev);
-  updateCharts(cur, prev);
-
-  if(comparisonDate){
-    document.getElementById('summaryWrap').style.display = 'block';
-    renderSummaryTable(cur, prev);
-  } else {
-    document.getElementById('summaryWrap').style.display = 'none';
-  }
-  renderWRESummary(cur, prev);
+  renderKPIs(cur, prev, false);
+  updateCharts(cur, prev, false);
+  if(comparisonDate) renderSummaryTable(cur, prev);
+  renderWRESummary(cur, prev, false);
 
   const combined = getCombinedRecords();
   populateColumnFilters(combined);
@@ -728,14 +846,83 @@ function selectDate(dateStr, explicitCompare){
     (comparisonDate ? ` • Compared to ${fmtDate(comparisonDate)}` : '');
 }
 
+function renderOverallView(){
+  document.getElementById('dateSection').style.display = 'none';
+  document.getElementById('comparisonBanner').style.display = 'none';
+  document.getElementById('overallBanner').style.display = 'flex';
+  document.getElementById('summaryWrap').style.display = 'none';
+  document.getElementById('overallSummaryWrap').style.display = 'block';
+
+  const all = getAllRecords();
+  const dates = Object.keys(allData).sort();
+
+  document.getElementById('overallInfo').innerHTML =
+    `${dates.length} date${dates.length!==1?'s':''} • ${all.length} total records`;
+
+  renderKPIs(all, [], true);
+  updateCharts(all, [], true);
+  renderWRESummary(all, [], true);
+  renderOverallSummaryTable();
+
+  populateColumnFilters(all);
+  renderTable(all);
+
+  document.getElementById('headerSub').textContent =
+    `Overall Report • All ${dates.length} dates • ${all.length} records`;
+}
+
+function renderOverallSummaryTable(){
+  const dates = Object.keys(allData).sort();
+  const tbody = document.getElementById('overallSummaryBody');
+  let html = '';
+  const totals = { total:0, accepted:0, requested:0, pickedUp:0, notYet:0, checkedIn:0, pending:0 };
+  dates.forEach(d => {
+    const m = computeMetrics(allData[d]);
+    totals.total += m.total;
+    totals.accepted += m.accepted;
+    totals.requested += m.requested;
+    totals.pickedUp += m.pickedUp;
+    totals.notYet += m.notYet;
+    totals.checkedIn += m.checkedIn;
+    totals.pending += m.pending;
+    html += `<tr>
+      <td><strong>${fmtDate(d)}</strong></td>
+      <td>${m.total}</td>
+      <td>${m.accepted}</td>
+      <td>${m.requested}</td>
+      <td>${m.pickedUp}</td>
+      <td>${m.notYet}</td>
+      <td>${m.checkedIn}</td>
+      <td>${m.pending}</td>
+    </tr>`;
+  });
+  html += `<tr class="total-row">
+    <td><i class="fas fa-sigma" style="margin-right:6px;color:#64748b;font-size:11px;"></i>All Dates Total</td>
+    <td>${totals.total}</td>
+    <td>${totals.accepted}</td>
+    <td>${totals.requested}</td>
+    <td>${totals.pickedUp}</td>
+    <td>${totals.notYet}</td>
+    <td>${totals.checkedIn}</td>
+    <td>${totals.pending}</td>
+  </tr>`;
+  tbody.innerHTML = html;
+  document.getElementById('overallSummaryCount').textContent = `${dates.length} date${dates.length!==1?'s':''}`;
+}
+
 function populateColumnFilters(data){
   const distinct = (key) => {
     const vals = data.map(d => d[key] || '—').filter(v => v !== '' && v !== '—');
     return [...new Set(vals)].sort();
   };
   const dateOptions = [];
-  if(selectedDate) dateOptions.push({ v: selectedDate, l: fmtDateShort(selectedDate) });
-  if(comparisonDate) dateOptions.push({ v: comparisonDate, l: fmtDateShort(comparisonDate) });
+  if(viewMode === 'overall'){
+    const dates = [...new Set(data.map(r => r.dateKey || r._dateKey).filter(Boolean))].sort();
+    dates.forEach(d => dateOptions.push({ v: d, l: fmtDateShort(d) }));
+  } else {
+    if(selectedDate) dateOptions.push({ v: selectedDate, l: fmtDateShort(selectedDate) });
+    if(comparisonDate) dateOptions.push({ v: comparisonDate, l: fmtDateShort(comparisonDate) });
+  }
 
   const wreSet = new Set();
   data.forEach(r => wreSet.add(getWREForGarage(r.garage) || 'Unmapped'));
@@ -771,7 +958,6 @@ function getTabFilteredData(data){
   return data;
 }
 function applyColumnFilters(){
-  if(!selectedDate) return;
   renderTable(getCombinedRecords());
 }
 
@@ -789,7 +975,7 @@ function renderTable(data){
     mobile:  document.getElementById('colMobile').value,
   };
   let dateFiltered = data;
-  if(f.date) dateFiltered = data.filter(r => r.dateKey === f.date);
+  if(f.date) dateFiltered = data.filter(r => (r.dateKey || r._dateKey) === f.date);
 
   document.getElementById('tabCountAll').textContent = dateFiltered.length;
   document.getElementById('tabCountFlow').textContent = dateFiltered.filter(r => r.status === 'In Booking Flow').length;
@@ -820,9 +1006,10 @@ function renderTable(data){
     const w = getWREForGarage(r.garage);
     const wLabel = w || 'Unmapped';
     const wCls = w ? wreColorClass(w) : 'unmapped';
+    const dk = r.dateKey || r._dateKey;
     html += `<tr class="${rowCls}">
       <td>${i+1}</td>
-      <td>${r.dateKey ? fmtDate(r.dateKey) : '—'}</td>
+      <td>${dk ? fmtDate(dk) : '—'}</td>
       <td><strong>${r.name}</strong></td>
       <td>${r.bookingId}</td>
       <td>${r.garage}</td>
@@ -842,20 +1029,146 @@ function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   applyColumnFilters();
 }
+function setViewMode(mode){
+  viewMode = mode;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === mode));
+  if(mode === 'overall') renderOverallView();
+  else if(selectedDate) selectDate(selectedDate);
+}
 function resetAll(){
   document.querySelectorAll('.col-filter select').forEach(s => s.value = '');
   switchTab('all');
-  if(selectedDate) selectDate(selectedDate);
+  if(viewMode === 'overall') renderOverallView();
+  else if(selectedDate) selectDate(selectedDate);
+}
+
+/* ============================================================
+   EXCEL EXPORT
+============================================================= */
+function downloadExcel(){
+  let records;
+  let filename;
+
+  if(viewMode === 'overall'){
+    records = getAllRecords();
+    filename = `booking-report-overall-${todayStr()}.xlsx`;
+  } else {
+    records = getCombinedRecords().map(r => {
+      const w = getWREForGarage(r.garage);
+      return { ...r, _wre: w || 'Unmapped' };
+    });
+    filename = `booking-report-${selectedDate || todayStr()}` +
+               (comparisonDate ? `-vs-${comparisonDate}` : '') + '.xlsx';
+  }
+
+  // Apply current tab filter (all / flow / requested)
+  const exportRecords = getTabFilteredData(records);
+
+  // ---- Sheet 1: Detailed Records ----
+  const detailedRows = exportRecords.map((r, i) => {
+    const dk = r.dateKey || r._dateKey;
+    const w = r._wre || getWREForGarage(r.garage) || 'Unmapped';
+    return {
+      '#': i + 1,
+      'Date': dk ? fmtDate(dk) : '—',
+      'Customer Name': r.name,
+      'Booking ID': r.bookingId,
+      'Customer Mobile': r.mobile,
+      'Garage Name': r.garage,
+      'WRE Responsible': w,
+      'Booking Status': r.status,
+      'Pickup': r.pickup,
+      'Check-in': r.checkin,
+    };
+  });
+
+  // ---- Sheet 2: Date Summary (always all dates) ----
+  const summaryRows = [];
+  const dates = Object.keys(allData).sort();
+  const totals = { total:0, accepted:0, requested:0, pickedUp:0, notYet:0, checkedIn:0, pending:0 };
+  dates.forEach(d => {
+    const m = computeMetrics(allData[d]);
+    totals.total += m.total;
+    totals.accepted += m.accepted;
+    totals.requested += m.requested;
+    totals.pickedUp += m.pickedUp;
+    totals.notYet += m.notYet;
+    totals.checkedIn += m.checkedIn;
+    totals.pending += m.pending;
+    summaryRows.push({
+      'Date': fmtDate(d),
+      'Total Bookings': m.total,
+      'Accepted (In Flow)': m.accepted,
+      'Requested': m.requested,
+      'Picked Up': m.pickedUp,
+      'Not Yet Picked': m.notYet,
+      'Checked-in': m.checkedIn,
+      'Pending Check-in': m.pending,
+    });
+  });
+  summaryRows.push({
+    'Date': 'TOTAL (All Dates)',
+    'Total Bookings': totals.total,
+    'Accepted (In Flow)': totals.accepted,
+    'Requested': totals.requested,
+    'Picked Up': totals.pickedUp,
+    'Not Yet Picked': totals.notYet,
+    'Checked-in': totals.checkedIn,
+    'Pending Check-in': totals.pending,
+  });
+
+  // ---- Sheet 3: WRE Summary ----
+  const wreCur = {};
+  const allForWRE = viewMode === 'overall' ? getAllRecords() : (selectedDate ? (allData[selectedDate] || []) : []);
+  allForWRE.forEach(r => {
+    const w = getWREForGarage(r.garage) || 'Unmapped';
+    wreCur[w] = (wreCur[w] || 0) + 1;
+  });
+  const wreTotal = Object.values(wreCur).reduce((a,b)=>a+b, 0);
+  const wreRows = Object.entries(wreCur).sort((a,b) => b[1]-a[1]).map(([w, c]) => ({
+    'WRE Responsible': w,
+    'Bookings': c,
+    'Share %': wreTotal ? Number(((c/wreTotal)*100).toFixed(1)) : 0,
+  }));
+
+  // ---- Build workbook ----
+  const wb = XLSX.utils.book_new();
+  if(detailedRows.length){
+    const ws1 = XLSX.utils.json_to_sheet(detailedRows);
+    // Set column widths
+    ws1['!cols'] = [
+      { wch: 5 }, { wch: 22 }, { wch: 24 }, { wch: 12 }, { wch: 15 },
+      { wch: 28 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 16 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Detailed Records');
+  }
+  if(summaryRows.length){
+    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+    ws2['!cols'] = [
+      { wch: 22 }, { wch: 15 }, { wch: 18 }, { wch: 12 },
+      { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 18 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Date Summary');
+  }
+  if(wreRows.length){
+    const ws3 = XLSX.utils.json_to_sheet(wreRows);
+    ws3['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'WRE Summary');
+  }
+
+  XLSX.writeFile(wb, filename);
 }
 
 function init(){
   document.getElementById('currentDate').textContent =
     new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
-
   initCharts();
 
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
+  });
+  document.querySelectorAll('.view-btn').forEach(b => {
+    b.addEventListener('click', () => setViewMode(b.dataset.view));
   });
   document.querySelectorAll('.col-filter select').forEach(s => {
     s.addEventListener('change', applyColumnFilters);
@@ -868,6 +1181,7 @@ function init(){
     else if(this.value) alert('No data for this date.');
   });
   document.getElementById('syncBtn').addEventListener('click', syncFromZoho);
+  document.getElementById('excelBtn').addEventListener('click', downloadExcel);
 
   syncFromZoho();
 }
