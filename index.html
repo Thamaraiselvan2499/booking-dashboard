@@ -267,7 +267,9 @@ table.data-table tbody tr.row-prev:hover{background:#f0f4ff}
 </div>
 
 <script>
-const API_BASE = 'http://localhost:3000';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+  ? 'http://localhost:3000'
+  : window.location.origin;
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 let allData = {};
@@ -668,8 +670,9 @@ function populateCompareWithSelect(){
 }
 function findPreviousDate(dateStr){
   if(!dateStr) return null;
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() - 1);
+  const p = dateStr.split('-').map(Number);
+  const d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  d.setUTCDate(d.getUTCDate() - 1);
   const y = d.toISOString().split('T')[0];
   if(allData[y]) return y;
   const keys = Object.keys(allData).filter(k => k < dateStr).sort();
