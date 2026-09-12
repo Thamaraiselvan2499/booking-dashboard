@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Garage Revenue Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Roboto,system-ui,sans-serif}
+body{background:#f0f4f9;padding:20px;min-height:100vh}
+.dashboard{max-width:1600px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:22px}
+.header-left h1{font-size:26px;font-weight:700;color:#0b1a33;letter-spacing:-.5px}
+.header-left h1 i{color:#059669;margin-right:10px}
+.header-left .sub{font-size:13px;color:#64748b;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date-badge{background:#fff;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:500;color:#1e293b;box-shadow:0 2px 6px rgba(0,0,0,.04);border:1px solid #e2e8f0}
+.date-badge i{color:#059669;margin-right:8px}
+.btn-clear{background:#f1f5f9;color:#475569;border:1px solid #d1d9e6;padding:8px 18px;border-radius:40px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.15s}
+.btn-clear:hover{background:#e2e8f0}
+.sync-section{background:#fff;border-radius:18px;padding:18px 22px;margin-bottom:20px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.03);display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px}
+.sync-label{font-weight:600;color:#0b1a33;font-size:14px;display:flex;align-items:center;gap:8px}
+.sync-label i{color:#059669}
+.btn-sync{background:#059669;border:none;color:#fff;padding:8px 24px;border-radius:40px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+.btn-sync:hover{background:#047857}
+.btn-sync:disabled{background:#94a3b8;cursor:not-allowed}
+.btn-excel{background:#16a34a;border:none;color:#fff;padding:8px 20px;border-radius:40px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+.btn-excel:hover{background:#15803d}
+.sync-status{font-size:12px;color:#16a34a;display:flex;align-items:center;gap:6px}
+.sync-status.error{color:#dc2626}
+.sync-status.syncing{color:#059669}
+.last-sync{font-size:11.5px;color:#94a3b8;margin-left:auto}
+.slicer-bar{background:#fff;border-radius:18px;padding:16px 22px;margin-bottom:20px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.03);display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px}
+.slicer-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.slicer-group label{font-size:12px;font-weight:600;color:#334155;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.slicer-group label i{color:#059669;font-size:12px}
+.slicer-group select,.slicer-group input{padding:6px 14px;border-radius:40px;border:1px solid #d1d9e6;background:#f8fafc;font-size:13px;color:#1e293b;outline:none;min-width:140px}
+.slicer-group select:focus,.slicer-group input:focus{border-color:#059669;background:#fff}
+.slicer-group .month-tabs{display:flex;gap:3px;background:#f1f5f9;padding:3px;border-radius:40px;flex-wrap:wrap}
+.slicer-group .month-tab{padding:5px 14px;border:none;border-radius:40px;background:transparent;font-size:12px;font-weight:500;color:#475569;cursor:pointer;transition:.15s}
+.slicer-group .month-tab:hover{background:#e2e8f0}
+.slicer-group .month-tab.active{background:#059669;color:#fff}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:16px;padding:16px 16px 14px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:.15s;position:relative;overflow:hidden}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.06)}
+.kpi-card .label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.kpi-card .label i{font-size:13px;width:16px}
+.kpi-card .value{font-size:24px;font-weight:700;color:#0b1a33;line-height:1.2;word-break:break-all}
+.kpi-card .value.small{font-size:19px}
+.kpi-card .sub{font-size:11.5px;color:#94a3b8;margin-top:5px}
+.kpi-card .progress{height:5px;background:#f1f5f9;border-radius:20px;margin-top:8px;overflow:hidden}
+.kpi-card .progress .fill{height:100%;border-radius:20px;background:#059669}
+.kpi-card .progress .fill.warn{background:#d97706}
+.kpi-card .progress .fill.danger{background:#dc2626}
+.kpi-card.green .label i{color:#16a34a}
+.kpi-card.blue .label i{color:#2563eb}
+.kpi-card.amber .label i{color:#d97706}
+.kpi-card.rose .label i{color:#e11d48}
+.kpi-card.purple .label i{color:#7c3aed}
+.kpi-card.teal .label i{color:#0d9488}
+.kpi-card.indigo .label i{color:#4f46e5}
+.kpi-card.cyan .label i{color:#0891b2}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.chart-box{background:#fff;border-radius:16px;padding:16px 16px 10px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.chart-box .chart-title{font-size:13px;font-weight:600;color:#0b1a33;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.chart-box .chart-title i{color:#059669}
+.chart-box .chart-wrap{position:relative;height:250px}
+.table-wrap{background:#fff;border-radius:16px;border:1px solid #eef2f6;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.03);margin-bottom:20px}
+.table-header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid #f1f5f9}
+.table-header h3{font-size:15px;font-weight:600;color:#0b1a33}
+.table-header h3 i{color:#059669;margin-right:8px}
+.table-count{font-size:12px;color:#64748b;background:#f1f5f9;padding:4px 14px;border-radius:40px}
+.table-scroll{overflow-x:auto;padding:0 4px 4px}
+table.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table.data-table thead{background:#f8fafc;border-bottom:1px solid #e2e8f0}
+table.data-table th{text-align:left;padding:9px 12px;font-weight:600;color:#334155;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+table.data-table th.num{text-align:right}
+table.data-table td{padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#1e293b;vertical-align:middle}
+table.data-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.data-table tbody tr:hover{background:#fafcff}
+table.data-table tbody tr.total-row{background:#f0fdf4;font-weight:700;border-top:2px solid #86efac}
+table.data-table tbody tr.total-row td{color:#065f46;padding-top:12px;padding-bottom:12px}
+table.data-table tbody tr.zero-row{opacity:.5}
+.money{font-variant-numeric:tabular-nums}
+.money.pos{color:#15803d;font-weight:600}
+.money.neg{color:#b91c1c;font-weight:600}
+.money.out{color:#b45309;font-weight:600}
+.pct-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dcfce7;color:#166534}
+.pct-pill.warn{background:#fef3c7;color:#92400e}
+.pct-pill.danger{background:#fee2e2;color:#b91c1c}
+.location-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:600;background:#dbeafe;color:#1e40af}
+.location-pill.delhi{background:#fce7f3;color:#9d174d}
+.no-data-msg{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px}
+.no-data-msg i{font-size:36px;display:block;margin-bottom:10px;color:#cbd5e1}
+@media(max-width:1100px){.chart-row{grid-template-columns:1fr}}
+@media(max-width:600px){
+  body{padding:12px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .kpi-card .value{font-size:18px}
+  .slicer-bar{flex-direction:column;align-items:stretch}
+  .slicer-group{flex-direction:column;align-items:stretch}
+  .slicer-group select,.slicer-group input{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+  <header class="header">
+    <div class="header-left">
+      <h1><i class="fas fa-chart-pie"></i> Garage Revenue Dashboard</h1>
+      <div class="sub" id="headerSub">Connecting to Zoho Sheet...</div>
+    </div>
+    <div class="header-right">
+      <span class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></span>
+      <button class="btn-clear" onclick="resetAll()"><i class="fas fa-undo-alt"></i> Reset</button>
+    </div>
+  </header>
+
+  <section class="sync-section">
+    <span class="sync-label"><i class="fas fa-cloud-download-alt"></i> Live from Zoho</span>
+    <button class="btn-sync" id="syncBtn"><i class="fas fa-sync-alt"></i> Sync Now</button>
+    <button class="btn-excel" id="excelBtn"><i class="fas fa-file-excel"></i> Download Excel</button>
+    <span class="sync-status" id="syncStatus"></span>
+    <span class="last-sync">Last sync: <span id="lastSync">—</span></span>
+  </section>
+
+  <nav class="slicer-bar">
+    <div class="slicer-group">
+      <label><i class="fas fa-map-marker-alt"></i> Location</label>
+      <select id="filterLocation"><option value="">All Locations</option></select>
+    </div>
+    <div class="slicer-group">
+      <label><i class="fas fa-warehouse"></i> Garage</label>
+      <select id="filterGarage"><option value="">All Garages</option></select>
+    </div>
+    <div class="slicer-group">
+      <label><i class="fas fa-calendar-alt"></i> Period</label>
+      <div class="month-tabs" id="monthTabs">
+        <button class="month-tab active" data-month="all">Overall</button>
+        <button class="month-tab" data-month="April">Apr</button>
+        <button class="month-tab" data-month="May">May</button>
+        <button class="month-tab" data-month="June">Jun</button>
+        <button class="month-tab" data-month="July">Jul</button>
+        <button class="month-tab" data-month="August">Aug</button>
+        <button class="month-tab" data-month="September">Sep</button>
+        <button class="month-tab" data-month="October">Oct</button>
+        <button class="month-tab" data-month="November">Nov</button>
+        <button class="month-tab" data-month="December">Dec</button>
+      </div>
+    </div>
+    <div class="slicer-group" style="flex:1;min-width:160px;">
+      <label><i class="fas fa-search"></i> Search</label>
+      <input type="text" id="filterSearch" placeholder="Garage name..." />
+    </div>
+  </nav>
+
+  <section class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="label"><i class="fas fa-file-contract"></i> Contract Value</div>
+      <div class="value small" id="kpiContract">₹0</div>
+      <div class="sub" id="kpiContractSub">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="label"><i class="fas fa-hand-holding-usd"></i> Cleared Net Amount</div>
+      <div class="value small" id="kpiCleared">₹0</div>
+      <div class="progress"><div class="fill" id="kpiClearedBar" style="width:0%"></div></div>
+      <div class="sub" id="kpiClearedSub">—</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="label"><i class="fas fa-hourglass-half"></i> Outstanding</div>
+      <div class="value small" id="kpiOutstanding">₹0</div>
+      <div class="progress"><div class="fill danger" id="kpiOutstandingBar" style="width:0%"></div></div>
+      <div class="sub" id="kpiOutstandingSub">—</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="label"><i class="fas fa-receipt"></i> Total Invoices</div>
+      <div class="value" id="kpiInvoices">0</div>
+      <div class="sub" id="kpiInvoicesSub">—</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="label"><i class="fas fa-rupee-sign"></i> Invoice Value</div>
+      <div class="value small" id="kpiInvoiceValue">₹0</div>
+      <div class="sub" id="kpiInvoiceValueSub">—</div>
+    </div>
+    <div class="kpi-card rose">
+      <div class="label"><i class="fas fa-percentage"></i> Total Commission</div>
+      <div class="value small" id="kpiCommission">₹0</div>
+      <div class="sub" id="kpiCommissionSub">—</div>
+    </div>
+    <div class="kpi-card indigo">
+      <div class="label"><i class="fas fa-chart-line"></i> Avg Commission %</div>
+      <div class="value" id="kpiAvgCommission">0%</div>
+      <div class="sub" id="kpiAvgCommissionSub">—</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="label"><i class="fas fa-users"></i> Committed Leads</div>
+      <div class="value" id="kpiLeads">0</div>
+      <div class="progress"><div class="fill" id="kpiLeadsBar" style="width:0%"></div></div>
+      <div class="sub" id="kpiLeadsSub">—</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="label"><i class="fas fa-check-double"></i> Lead Completion</div>
+      <div class="value" id="kpiCompletion">0%</div>
+      <div class="progress"><div class="fill" id="kpiCompletionBar" style="width:0%"></div></div>
+      <div class="sub" id="kpiCompletionSub">—</div>
+    </div>
+  </section>
+
+  <div class="chart-row">
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Top 10 Garages by Invoice Value</div><div class="chart-wrap"><canvas id="chartTopGarages"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Contract vs Cleared vs Outstanding</div><div class="chart-wrap"><canvas id="chartContract"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-pie"></i> Location Share</div><div class="chart-wrap"><canvas id="chartLocation"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-line"></i> Monthly Revenue Trend</div><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3><i class="fas fa-table"></i> Garage-wise Revenue</h3>
+      <span class="table-count" id="garageTableCount">0 garages</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table" id="garageTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Garage</th><th>Location</th>
+            <th class="num">Contract</th><th class="num">Cleared</th>
+            <th class="num">Outstanding</th><th class="num">Invoices</th>
+            <th class="num">Invoice Value</th><th class="num">Commission</th>
+            <th class="num">Comm %</th><th class="num">Leads</th>
+          </tr>
+        </thead>
+        <tbody id="garageBody">
+          <tr><td colspan="11" class="no-data-msg"><i class="fas fa-cloud-download-alt"></i>Fetching from Zoho...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3><i class="fas fa-calendar-alt"></i> Monthly Breakdown</h3>
+      <span class="table-count" id="monthlyTableCount">—</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table" id="monthlyTable">
+        <thead>
+          <tr>
+            <th>Month</th><th class="num">Invoices</th>
+            <th class="num">Invoice Value</th><th class="num">Commission</th>
+            <th class="num">Avg Billing</th><th class="num">Comm %</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+  ? 'http://localhost:3000'
+  : window.location.origin;
+
+const MONTHS = ['April','May','June','July','August','September','October','November','December'];
+
+let RAW_GARAGES = [];
+let charts = {};
+let state = { location: '', garage: '', month: 'all', search: '' };
+
+/* ============================================================
+   FORMATTING
+============================================================= */
+function fmtCurrency(v){
+  const n = Number(v) || 0;
+  if(Math.abs(n) >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+  if(Math.abs(n) >= 100000)   return '₹' + (n/100000).toFixed(2) + ' L';
+  if(Math.abs(n) >= 1000)     return '₹' + (n/1000).toFixed(1) + 'K';
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+function fmtCurrencyFull(v){ return '₹' + Math.round(Number(v)||0).toLocaleString('en-IN'); }
+function fmtNum(v){ return (Number(v) || 0).toLocaleString('en-IN'); }
+function pctClsFromString(p){ const n=Number(p)||0; if(n>=20) return 'danger'; if(n>=12) return 'warn'; return ''; }
+
+/* ============================================================
+   PARSE — backend now returns named fields directly
+============================================================= */
+function parseRevenueRecords(records){
+  if(!records || !records.length) return [];
+  return records
+    .filter(g => g && g.name && String(g.name).trim())
+    .map(g => {
+      const contract = Number(g.contract) || 0;
+      const cleared  = Number(g.cleared)  || 0;
+      const monthly = {};
+      MONTHS.forEach(m => {
+        const src = (g.monthly && g.monthly[m]) || {};
+        monthly[m] = {
+          invoice:       Number(src.invoice)       || 0,
+          invoiceValue:  Number(src.invoiceValue)  || 0,
+          commission:    Number(src.commission)    || 0,
+          avgBilling:    Number(src.avgBilling)    || 0,
+          commissionPct: Number(src.commissionPct) || 0,
+        };
+      });
+      return {
+        name: String(g.name).trim(),
+        location: String(g.location || '').trim(),
+        contract, cleared,
+        outstanding: (g.outstanding !== undefined) ? Number(g.outstanding) || 0 : (contract - cleared),
+        leads: Number(g.leads) || 0,
+        totalInvoice:       Number(g.totalInvoice)       || 0,
+        totalInvoiceValue:  Number(g.totalInvoiceValue)  || 0,
+        totalCommission:    Number(g.totalCommission)    || 0,
+        totalAvgBilling:    Number(g.totalAvgBilling)    || 0,
+        totalCommissionPct: Number(g.totalCommissionPct) || 0,
+        monthly
+      };
+    });
+}
+
+/* ============================================================
+   FILTERS
+============================================================= */
+function applyFilters(data){
+  return data.filter(g => {
+    if(state.location && g.location !== state.location) return false;
+    if(state.garage && g.name !== state.garage) return false;
+    if(state.search && !g.name.toLowerCase().includes(state.search.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function metricsForPeriod(g){
+  if(state.month === 'all'){
+    return {
+      invoice: g.totalInvoice,
+      invoiceValue: g.totalInvoiceValue,
+      commission: g.totalCommission,
+      avgBilling: g.totalAvgBilling,
+      commissionPct: g.totalCommissionPct
+    };
+  }
+  const m = g.monthly[state.month] || { invoice:0, invoiceValue:0, commission:0, avgBilling:0, commissionPct:0 };
+  return {
+    invoice: m.invoice, invoiceValue: m.invoiceValue,
+    commission: m.commission, avgBilling: m.avgBilling,
+    commissionPct: m.commissionPct
+  };
+}
+
+/* ============================================================
+   KPIs
+============================================================= */
+function renderKPIs(filtered){
+  let contract=0, cleared=0, leads=0, invoices=0, invoiceValue=0, commission=0;
+  filtered.forEach(g => {
+    const m = metricsForPeriod(g);
+    contract += g.contract;
+    cleared  += g.cleared;
+    leads    += g.leads;
+    invoices += m.invoice;
+    invoiceValue += m.invoiceValue;
+    commission   += m.commission;
+  });
+  const outstanding = contract - cleared;
+  const clearedPct = contract ? (cleared / contract) * 100 : 0;
+  const outPct     = contract ? (outstanding / contract) * 100 : 0;
+  const avgComm    = invoiceValue ? (commission / invoiceValue) : 0;
+  const completion = leads ? (invoices / leads) * 100 : 0;
+
+  document.getElementById('kpiContract').textContent = fmtCurrency(contract);
+  document.getElementById('kpiContractSub').textContent = `${filtered.length} garages • ${fmtCurrencyFull(contract)}`;
+
+  document.getElementById('kpiCleared').textContent = fmtCurrency(cleared);
+  document.getElementById('kpiClearedBar').style.width = Math.min(clearedPct, 100) + '%';
+  document.getElementById('kpiClearedSub').textContent = `${clearedPct.toFixed(1)}% of contract`;
+
+  document.getElementById('kpiOutstanding').textContent = fmtCurrency(outstanding);
+  document.getElementById('kpiOutstandingBar').style.width = Math.min(outPct, 100) + '%';
+  document.getElementById('kpiOutstandingSub').textContent = `${outPct.toFixed(1)}% pending`;
+
+  document.getElementById('kpiInvoices').textContent = fmtNum(invoices);
+  document.getElementById('kpiInvoicesSub').textContent = state.month === 'all' ? 'All months' : state.month;
+
+  document.getElementById('kpiInvoiceValue').textContent = fmtCurrency(invoiceValue);
+  document.getElementById('kpiInvoiceValueSub').textContent = fmtCurrencyFull(invoiceValue);
+
+  document.getElementById('kpiCommission').textContent = fmtCurrency(commission);
+  document.getElementById('kpiCommissionSub').textContent = fmtCurrencyFull(commission);
+
+  document.getElementById('kpiAvgCommission').textContent = (avgComm * 100).toFixed(2) + '%';
+  document.getElementById('kpiAvgCommissionSub').textContent = 'Commission ÷ Invoice Value';
+
+  document.getElementById('kpiLeads').textContent = fmtNum(leads);
+  document.getElementById('kpiLeadsBar').style.width = Math.min(completion, 100) + '%';
+  document.getElementById('kpiLeadsSub').textContent = 'Committed leads';
+
+  document.getElementById('kpiCompletion').textContent = completion.toFixed(1) + '%';
+  const bar = document.getElementById('kpiCompletionBar');
+  bar.style.width = Math.min(completion, 100) + '%';
+  bar.className = 'fill' + (completion < 50 ? ' danger' : completion < 80 ? ' warn' : '');
+  document.getElementById('kpiCompletionSub').textContent = `${fmtNum(invoices)} invoices / ${fmtNum(leads)} leads`;
+}
+
+/* ============================================================
+   GARAGE TABLE
+============================================================= */
+function renderGarageTable(filtered){
+  const body = document.getElementById('garageBody');
+  document.getElementById('garageTableCount').textContent = `${filtered.length} garages`;
+  if(!filtered.length){
+    body.innerHTML = `<tr><td colspan="11" class="no-data-msg"><i class="fas fa-inbox"></i>No garages match</td></tr>`;
+    return;
+  }
+  const sorted = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue);
+  let html = '';
+  const totals = { contract:0, cleared:0, outstanding:0, invoices:0, invoiceValue:0, commission:0, leads:0 };
+  sorted.forEach((g, i) => {
+    const m = metricsForPeriod(g);
+    totals.contract += g.contract;
+    totals.cleared += g.cleared;
+    totals.outstanding += g.outstanding;
+    totals.invoices += m.invoice;
+    totals.invoiceValue += m.invoiceValue;
+    totals.commission += m.commission;
+    totals.leads += g.leads;
+    const outCls = g.outstanding > 0 ? 'money out' : 'money pos';
+    const locCls = (g.location || '').toLowerCase() === 'delhi' ? 'location-pill delhi' : 'location-pill';
+    const zeroCls = m.invoiceValue === 0 && state.month !== 'all' ? 'zero-row' : '';
+    html += `<tr class="${zeroCls}">
+      <td>${i+1}</td>
+      <td><strong>${g.name}</strong></td>
+      <td><span class="${locCls}">${g.location || '—'}</span></td>
+      <td class="num money">${fmtCurrencyFull(g.contract)}</td>
+      <td class="num money pos">${fmtCurrencyFull(g.cleared)}</td>
+      <td class="num ${outCls}">${fmtCurrencyFull(g.outstanding)}</td>
+      <td class="num">${fmtNum(m.invoice)}</td>
+      <td class="num money">${fmtCurrencyFull(m.invoiceValue)}</td>
+      <td class="num money">${fmtCurrencyFull(m.commission)}</td>
+      <td class="num"><span class="pct-pill ${pctClsFromString(m.commissionPct * 100)}">${(m.commissionPct * 100).toFixed(2)}%</span></td>
+      <td class="num">${fmtNum(g.leads)}</td>
+    </tr>`;
+  });
+  const overallCommPct = totals.invoiceValue ? (totals.commission / totals.invoiceValue) * 100 : 0;
+  html += `<tr class="total-row">
+    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${sorted.length} garages)</td>
+    <td class="num">${fmtCurrencyFull(totals.contract)}</td>
+    <td class="num">${fmtCurrencyFull(totals.cleared)}</td>
+    <td class="num">${fmtCurrencyFull(totals.outstanding)}</td>
+    <td class="num">${fmtNum(totals.invoices)}</td>
+    <td class="num">${fmtCurrencyFull(totals.invoiceValue)}</td>
+    <td class="num">${fmtCurrencyFull(totals.commission)}</td>
+    <td class="num">${overallCommPct.toFixed(2)}%</td>
+    <td class="num">${fmtNum(totals.leads)}</td>
+  </tr>`;
+  body.innerHTML = html;
+}
+
+/* ============================================================
+   MONTHLY TABLE
+============================================================= */
+function renderMonthlyTable(filtered){
+  const tbody = document.getElementById('monthlyBody');
+  const now = new Date();
+  const currentMonthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][now.getMonth()];
+  let html = '';
+  const totals = { invoice:0, invoiceValue:0, commission:0 };
+  MONTHS.forEach(m => {
+    let invoice=0, invoiceValue=0, commission=0;
+    filtered.forEach(g => {
+      invoice += g.monthly[m].invoice;
+      invoiceValue += g.monthly[m].invoiceValue;
+      commission += g.monthly[m].commission;
+    });
+    const avgBilling = invoice ? (invoiceValue/invoice) : 0;
+    const commPct = invoiceValue ? (commission/invoiceValue) : 0;
+    totals.invoice += invoice;
+    totals.invoiceValue += invoiceValue;
+    totals.commission += commission;
+    const isCurrent = m === currentMonthName;
+    const rowCls = isCurrent ? 'total-row' : '';
+    const active = state.month === m ? ' style="background:#f0fdf4;"' : '';
+    html += `<tr class="${rowCls}"${active}>
+      <td><strong>${m}</strong>${isCurrent ? ' <span style="font-size:10px;color:#059669;">● current</span>' : ''}</td>
+      <td class="num">${fmtNum(invoice)}</td>
+      <td class="num money">${fmtCurrencyFull(invoiceValue)}</td>
+      <td class="num money">${fmtCurrencyFull(commission)}</td>
+      <td class="num money">${fmtCurrencyFull(avgBilling)}</td>
+      <td class="num">${(commPct*100).toFixed(2)}%</td>
+    </tr>`;
+  });
+  const tAvg = totals.invoice ? (totals.invoiceValue/totals.invoice) : 0;
+  const tPct = totals.invoiceValue ? (totals.commission/totals.invoiceValue)*100 : 0;
+  html += `<tr class="total-row">
+    <td><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Overall Total</td>
+    <td class="num">${fmtNum(totals.invoice)}</td>
+    <td class="num">${fmtCurrencyFull(totals.invoiceValue)}</td>
+    <td class="num">${fmtCurrencyFull(totals.commission)}</td>
+    <td class="num">${fmtCurrencyFull(tAvg)}</td>
+    <td class="num">${tPct.toFixed(2)}%</td>
+  </tr>`;
+  tbody.innerHTML = html;
+  document.getElementById('monthlyTableCount').textContent = state.month === 'all' ? 'All 9 months' : `Viewing ${state.month}`;
+}
+
+/* ============================================================
+   CHARTS
+============================================================= */
+function initCharts(){
+  const baseOpts = () => ({
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{ size:11 } } } },
+    scales:{
+      y:{ beginAtZero:true, grid:{ color:'#eef2f6' }, ticks:{ font:{ size:10 } } },
+      x:{ grid:{ display:false }, ticks:{ font:{ size:9 }, maxRotation:40, minRotation:30 } }
+    }
+  });
+  charts.top = new Chart(document.getElementById('chartTopGarages'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Invoice Value', data:[], backgroundColor:'#059669', borderRadius:5 }] },
+    options: baseOpts()
+  });
+  charts.contract = new Chart(document.getElementById('chartContract'), {
+    type:'bar',
+    data:{ labels:[], datasets:[
+      { label:'Contract', data:[], backgroundColor:'#94a3b8', borderRadius:5 },
+      { label:'Cleared', data:[], backgroundColor:'#059669', borderRadius:5 },
+      { label:'Outstanding', data:[], backgroundColor:'#f59e0b', borderRadius:5 }
+    ]},
+    options: baseOpts()
+  });
+  charts.location = new Chart(document.getElementById('chartLocation'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:['#059669','#0ea5e9','#8b5cf6','#f59e0b'], borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{ size:11 } } } } }
+  });
+  charts.monthly = new Chart(document.getElementById('chartMonthly'), {
+    type:'line',
+    data:{ labels: MONTHS.map(m => m.slice(0,3)), datasets:[
+      { label:'Invoice Value', data:[], borderColor:'#059669', backgroundColor:'rgba(5,150,105,.12)', fill:true, tension:.3, pointRadius:4 },
+      { label:'Commission', data:[], borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.12)', fill:true, tension:.3, pointRadius:4 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{ size:11 } } } },
+      scales:{
+        y:{ beginAtZero:true, grid:{ color:'#eef2f6' }, ticks:{ font:{ size:10 }, callback: v => fmtCurrency(v) } },
+        x:{ grid:{ display:false }, ticks:{ font:{ size:10 } } }
+      }
+    }
+  });
+}
+
+function updateCharts(filtered){
+  const sorted = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue).slice(0, 10);
+  charts.top.data.labels = sorted.map(g => g.name);
+  charts.top.data.datasets[0].data = sorted.map(g => metricsForPeriod(g).invoiceValue);
+  charts.top.update();
+
+  charts.contract.data.labels = sorted.map(g => g.name);
+  charts.contract.data.datasets[0].data = sorted.map(g => g.contract);
+  charts.contract.data.datasets[1].data = sorted.map(g => g.cleared);
+  charts.contract.data.datasets[2].data = sorted.map(g => g.outstanding);
+  charts.contract.update();
+
+  const locMap = {};
+  filtered.forEach(g => {
+    const loc = g.location || 'Unknown';
+    locMap[loc] = (locMap[loc] || 0) + metricsForPeriod(g).invoiceValue;
+  });
+  charts.location.data.labels = Object.keys(locMap);
+  charts.location.data.datasets[0].data = Object.values(locMap);
+  charts.location.update();
+
+  const invArr=[], commArr=[];
+  MONTHS.forEach(m => {
+    let inv=0, comm=0;
+    filtered.forEach(g => {
+      inv += g.monthly[m].invoiceValue;
+      comm += g.monthly[m].commission;
+    });
+    invArr.push(inv);
+    commArr.push(comm);
+  });
+  charts.monthly.data.datasets[0].data = invArr;
+  charts.monthly.data.datasets[1].data = commArr;
+  charts.monthly.update();
+}
+
+/* ============================================================
+   MAIN RENDER
+============================================================= */
+function renderAll(){
+  const filtered = applyFilters(RAW_GARAGES);
+  renderKPIs(filtered);
+  renderGarageTable(filtered);
+  renderMonthlyTable(filtered);
+  updateCharts(filtered);
+  document.getElementById('headerSub').textContent =
+    `${filtered.length} garages shown • ${state.month === 'all' ? 'All months' : state.month}` +
+    (state.location ? ` • ${state.location}` : '') +
+    (state.garage ? ` • ${state.garage}` : '');
+}
+
+function populateSlicers(){
+  const locations = [...new Set(RAW_GARAGES.map(g => g.location).filter(Boolean))].sort();
+  const selLoc = document.getElementById('filterLocation');
+  selLoc.innerHTML = '<option value="">All Locations</option>';
+  locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; selLoc.appendChild(o); });
+  selLoc.value = state.location;
+
+  const garages = [...new Set(RAW_GARAGES.map(g => g.name).filter(Boolean))].sort();
+  const selGar = document.getElementById('filterGarage');
+  selGar.innerHTML = '<option value="">All Garages</option>';
+  garages.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; selGar.appendChild(o); });
+  selGar.value = state.garage;
+}
+
+/* ============================================================
+   EXCEL EXPORT
+============================================================= */
+function downloadExcel(){
+  const filtered = applyFilters(RAW_GARAGES);
+  const periodLabel = state.month === 'all' ? 'Overall' : state.month;
+
+  const garageRows = filtered.map((g, i) => {
+    const m = metricsForPeriod(g);
+    return {
+      '#': i+1, 'Garage Name': g.name, 'Location': g.location,
+      'Contract Value': g.contract, 'Cleared Net Amount': g.cleared,
+      'Outstanding': g.outstanding,
+      'Total Invoices': m.invoice, 'Invoice Value': m.invoiceValue,
+      'Commission': m.commission,
+      'Commission %': Number((m.commissionPct*100).toFixed(2)),
+      'Avg Billing': m.avgBilling, 'Committed Leads': g.leads,
+    };
+  });
+  if(garageRows.length){
+    const tot = { contract:0, cleared:0, outstanding:0, invoice:0, invoiceValue:0, commission:0, leads:0 };
+    filtered.forEach(g => {
+      const m = metricsForPeriod(g);
+      tot.contract += g.contract; tot.cleared += g.cleared; tot.outstanding += g.outstanding;
+      tot.invoice += m.invoice; tot.invoiceValue += m.invoiceValue;
+      tot.commission += m.commission; tot.leads += g.leads;
+    });
+    garageRows.push({
+      '#': 'TOTAL', 'Garage Name': `${filtered.length} garages`, 'Location': '',
+      'Contract Value': tot.contract, 'Cleared Net Amount': tot.cleared,
+      'Outstanding': tot.outstanding,
+      'Total Invoices': tot.invoice, 'Invoice Value': tot.invoiceValue,
+      'Commission': tot.commission,
+      'Commission %': tot.invoiceValue ? Number(((tot.commission/tot.invoiceValue)*100).toFixed(2)) : 0,
+      'Avg Billing': tot.invoice ? Math.round(tot.invoiceValue/tot.invoice) : 0,
+      'Committed Leads': tot.leads,
+    });
+  }
+
+  const monthlyRows = MONTHS.map(m => {
+    let inv=0, val=0, comm=0;
+    filtered.forEach(g => {
+      inv += g.monthly[m].invoice;
+      val += g.monthly[m].invoiceValue;
+      comm += g.monthly[m].commission;
+    });
+    return {
+      'Month': m, 'Invoices': inv, 'Invoice Value': val,
+      'Commission': comm,
+      'Avg Billing': inv ? Math.round(val/inv) : 0,
+      'Commission %': val ? Number(((comm/val)*100).toFixed(2)) : 0,
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  if(garageRows.length){
+    const ws1 = XLSX.utils.json_to_sheet(garageRows);
+    ws1['!cols'] = [{wch:5},{wch:30},{wch:12},{wch:16},{wch:18},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Garage Revenue');
+  }
+  if(monthlyRows.length){
+    const ws2 = XLSX.utils.json_to_sheet(monthlyRows);
+    ws2['!cols'] = [{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Breakdown');
+  }
+  XLSX.writeFile(wb, `garage-revenue-${periodLabel.replace(/\s/g,'-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+/* ============================================================
+   SYNC
+============================================================= */
+async function syncFromZoho(){
+  const btn = document.getElementById('syncBtn');
+  const statusEl = document.getElementById('syncStatus');
+  btn.disabled = true;
+  statusEl.className = 'sync-status syncing';
+  statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching from Zoho...';
+  try {
+    const res = await fetch(`${API_BASE}/api/revenue`);
+    if(!res.ok) throw new Error(`Backend returned ${res.status}`);
+    const payload = await res.json();
+    RAW_GARAGES = parseRevenueRecords(payload.records || []);
+    statusEl.className = 'sync-status';
+    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${RAW_GARAGES.length} garages loaded`;
+    document.getElementById('lastSync').textContent = new Date().toLocaleTimeString();
+    populateSlicers();
+    renderAll();
+  } catch (err) {
+    statusEl.className = 'sync-status error';
+    statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${err.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ============================================================
+   RESET
+============================================================= */
+function resetAll(){
+  state = { location: '', garage: '', month: 'all', search: '' };
+  document.getElementById('filterLocation').value = '';
+  document.getElementById('filterGarage').value = '';
+  document.getElementById('filterSearch').value = '';
+  document.querySelectorAll('.month-tab').forEach(t => t.classList.toggle('active', t.dataset.month === 'all'));
+  renderAll();
+}
+
+/* ============================================================
+   INIT
+============================================================= */
+function init(){
+  document.getElementById('currentDate').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  initCharts();
+
+  document.getElementById('filterLocation').addEventListener('change', function(){ state.location = this.value; renderAll(); });
+  document.getElementById('filterGarage').addEventListener('change',   function(){ state.garage   = this.value; renderAll(); });
+  document.getElementById('filterSearch').addEventListener('input',    function(){ state.search   = this.value; renderAll(); });
+  document.querySelectorAll('.month-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      state.month = t.dataset.month;
+      document.querySelectorAll('.month-tab').forEach(x => x.classList.toggle('active', x.dataset.month === state.month));
+      renderAll();
+    });
+  });
+  document.getElementById('syncBtn').addEventListener('click', syncFromZoho);
+  document.getElementById('excelBtn').addEventListener('click', downloadExcel);
+  syncFromZoho();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
