@@ -100,6 +100,13 @@ table.data-table tbody tr.total-row td{color:#065f46;padding-top:12px;padding-bo
 table.data-table tbody tr.zero-row{opacity:.5}
 table.data-table tbody tr.loss-row{background:#fef2f2}
 table.data-table tbody tr.loss-row:hover{background:#fee2e2}
+/* ===== Sortable column headers ===== */
+table.data-table th.sortable{cursor:pointer;user-select:none;position:relative;transition:background .12s}
+table.data-table th.sortable:hover{background:#eef2f6}
+table.data-table th.sortable .sort-ind{display:inline-block;margin-left:5px;font-size:9px;color:#cbd5e1;transition:color .12s;letter-spacing:0}
+table.data-table th.sortable:hover .sort-ind{color:#64748b}
+table.data-table th.sortable.active{color:#059669;background:#f0fdf4}
+table.data-table th.sortable.active .sort-ind{color:#059669;font-weight:700}
 .money{font-variant-numeric:tabular-nums}
 .money.pos{color:#15803d;font-weight:600}
 .money.neg{color:#b91c1c;font-weight:600}
@@ -252,7 +259,7 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
     <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-line"></i> Monthly Revenue Trend</div><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
   </div>
 
-  <!-- ===== NEW: Garage Revenue vs Subscription Paid Table ===== -->
+  <!-- ===== Garage Revenue vs Subscription Paid Table ===== -->
   <div class="table-wrap highlight">
     <div class="table-header">
       <h3><i class="fas fa-store"></i> Garage Revenue vs Subscription Paid — Per Garage</h3>
@@ -261,19 +268,20 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
     <div class="table-note">
       <strong>Garage Revenue</strong> = total invoice value billed by the garage to its customers. &nbsp;•&nbsp;
       <strong>Subscription Paid</strong> = amount the garage has paid to Carqure. &nbsp;•&nbsp;
-      <strong>Payment Ratio</strong> = Subscription Paid ÷ Garage Revenue → shows what % of the garage's billing they're paying Carqure. Lower is better for the garage.
+      <strong>Payment Ratio</strong> = Subscription Paid ÷ Garage Revenue → shows what % of the garage's billing they're paying Carqure. Lower is better for the garage. &nbsp;•&nbsp;
+      <strong>Tip:</strong> click any column header to sort.
     </div>
     <div class="table-scroll">
       <table class="data-table" id="profitTable">
         <thead>
           <tr>
             <th>#</th>
-            <th>Garage</th>
-            <th>Location</th>
-            <th class="num">Garage Revenue</th>
-            <th class="num">Invoices</th>
-            <th class="num">Subscription Paid</th>
-            <th class="num">Payment Ratio</th>
+            <th data-sort="name">Garage</th>
+            <th data-sort="location">Location</th>
+            <th class="num" data-sort="garageRevenue">Garage Revenue</th>
+            <th class="num" data-sort="invoices">Invoices</th>
+            <th class="num" data-sort="subscriptionPaid">Subscription Paid</th>
+            <th class="num" data-sort="ratio">Payment Ratio</th>
             <th class="num">Status</th>
           </tr>
         </thead>
@@ -293,11 +301,17 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
       <table class="data-table" id="garageTable">
         <thead>
           <tr>
-            <th>#</th><th>Garage</th><th>Location</th>
-            <th class="num">Contract</th><th class="num">Cleared</th>
-            <th class="num">Outstanding</th><th class="num">Invoices</th>
-            <th class="num">Invoice Value</th><th class="num">Commission</th>
-            <th class="num">Comm %</th><th class="num">Leads</th>
+            <th>#</th>
+            <th data-sort="name">Garage</th>
+            <th data-sort="location">Location</th>
+            <th class="num" data-sort="contract">Contract</th>
+            <th class="num" data-sort="cleared">Cleared</th>
+            <th class="num" data-sort="outstanding">Outstanding</th>
+            <th class="num" data-sort="invoices">Invoices</th>
+            <th class="num" data-sort="invoiceValue">Invoice Value</th>
+            <th class="num" data-sort="commission">Commission</th>
+            <th class="num" data-sort="commPct">Comm %</th>
+            <th class="num" data-sort="leads">Leads</th>
           </tr>
         </thead>
         <tbody id="garageBody"></tbody>
@@ -314,9 +328,12 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
       <table class="data-table" id="monthlyTable">
         <thead>
           <tr>
-            <th>Month</th><th class="num">Invoices</th>
-            <th class="num">Invoice Value</th><th class="num">Commission</th>
-            <th class="num">Avg Billing</th><th class="num">Comm %</th>
+            <th>Month</th>
+            <th class="num" data-sort="invoices">Invoices</th>
+            <th class="num" data-sort="invoiceValue">Invoice Value</th>
+            <th class="num" data-sort="commission">Commission</th>
+            <th class="num" data-sort="avgBilling">Avg Billing</th>
+            <th class="num" data-sort="commPct">Comm %</th>
           </tr>
         </thead>
         <tbody id="monthlyBody"></tbody>
@@ -337,6 +354,11 @@ let RAW_GARAGES = [];
 let charts = {};
 let state = { location: '', garage: '', month: 'all', search: '' };
 
+/* ===== SORT STATE =====
+   sortState[tableId] = { key: '<data-sort value>', dir: 1 | -1 }
+   Absent entry = default order. */
+const sortState = {};
+
 function fmtCurrency(v){
   const n = Number(v) || 0;
   if(Math.abs(n) >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
@@ -350,13 +372,76 @@ function fmtNum(v){ return (Number(v) || 0).toLocaleString('en-IN'); }
 /* ===== FIX 1: Commission % color rule =====
    0–10%  → red   (.pct-pill.danger)
    10–12% → amber (.pct-pill.warn)
-   >12%   → green (.pct-pill default)
-   Input is the percentage value (e.g. 15.81), not the fraction. */
+   >12%   → green (.pct-pill default) */
 function commissionPctClass(pct){
   const n = Number(pct) || 0;
   if(n < 10)  return 'danger';
   if(n <= 12) return 'warn';
   return '';
+}
+
+/* ============================================================
+   SORTABLE TABLE HEADERS
+============================================================= */
+function wireSortableHeaders(){
+  document.querySelectorAll('table.data-table').forEach(table => {
+    const tableId = table.id;
+    table.querySelectorAll('thead th[data-sort]').forEach(th => {
+      th.classList.add('sortable');
+      if(!th.querySelector('.sort-ind')){
+        const ind = document.createElement('span');
+        ind.className = 'sort-ind';
+        ind.textContent = '▲▼';
+        th.appendChild(ind);
+      }
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        const cur = sortState[tableId];
+        if(!cur || cur.key !== key){
+          sortState[tableId] = { key, dir: 1 };      // ascending
+        } else if(cur.dir === 1){
+          sortState[tableId] = { key, dir: -1 };     // descending
+        } else {
+          delete sortState[tableId];                  // default
+        }
+        updateSortIndicators();
+        renderAll();
+      });
+    });
+  });
+  updateSortIndicators();
+}
+
+function updateSortIndicators(){
+  document.querySelectorAll('table.data-table').forEach(table => {
+    const cur = sortState[table.id];
+    table.querySelectorAll('thead th[data-sort]').forEach(th => {
+      const ind = th.querySelector('.sort-ind');
+      th.classList.remove('active');
+      if(ind) ind.textContent = '▲▼';
+      if(cur && th.dataset.sort === cur.key){
+        th.classList.add('active');
+        if(ind) ind.textContent = cur.dir === 1 ? '▲' : '▼';
+      }
+    });
+  });
+}
+
+/* Generic sorter. `rows` is an array; `getters[key](row)` returns the comparable value. */
+function applySort(rows, tableId, getters){
+  const cur = sortState[tableId];
+  if(!cur) return rows;
+  const get = getters[cur.key];
+  if(!get) return rows;
+  const copy = rows.slice();
+  copy.sort((a, b) => {
+    const va = get(a), vb = get(b);
+    if(typeof va === 'number' && typeof vb === 'number'){
+      return (va - vb) * cur.dir;
+    }
+    return String(va).localeCompare(String(vb), undefined, {numeric:true, sensitivity:'base'}) * cur.dir;
+  });
+  return copy;
 }
 
 function parseRevenueRecords(records){
@@ -440,11 +525,9 @@ function renderKPIs(filtered){
   const avgComm    = invoiceValue ? (commission / invoiceValue) : 0;
   const completion = leads ? (invoices / leads) * 100 : 0;
 
-  // Garage Revenue = total invoice value billed by garages
   document.getElementById('kpiGarageRevenue').textContent = fmtCurrency(invoiceValue);
   document.getElementById('kpiGarageRevenueSub').textContent = `${filtered.length} garages • ${fmtCurrencyFull(invoiceValue)}`;
 
-  // Carqure Revenue = total commission
   document.getElementById('kpiRevenue').textContent = fmtCurrency(commission);
   const periodLabel = state.month === 'all' ? 'All months' : state.month;
   document.getElementById('kpiRevenueSub').textContent = `${periodLabel} • ${fmtCurrencyFull(commission)}`;
@@ -488,13 +571,27 @@ function renderProfitTable(filtered){
     return;
   }
 
-  const sorted = filtered.slice().sort((a, b) => {
-    return metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue;
-  });
+  const getters = {
+    name:           g => g.name.toLowerCase(),
+    location:       g => (g.location || '').toLowerCase(),
+    garageRevenue:  g => metricsForPeriod(g).invoiceValue,
+    invoices:       g => metricsForPeriod(g).invoice,
+    subscriptionPaid: g => g.cleared,
+    ratio:          g => {
+      const iv = metricsForPeriod(g).invoiceValue;
+      return iv > 0 ? (g.cleared / iv) * 100 : 0;
+    }
+  };
+  let rows;
+  if(sortState['profitTable']){
+    rows = applySort(filtered, 'profitTable', getters);
+  } else {
+    rows = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue);
+  }
 
   const totals = { garageRevenue: 0, subscriptionPaid: 0, invoices: 0 };
   let html = '';
-  sorted.forEach((g, i) => {
+  rows.forEach((g, i) => {
     const m = metricsForPeriod(g);
     const garageRevenue = m.invoiceValue;
     const subscriptionPaid = g.cleared;
@@ -540,7 +637,7 @@ function renderProfitTable(filtered){
   const overallStatusTxt = overallRatio < 3 ? '✓ Healthy' : overallRatio < 8 ? '⚠ Moderate' : '⚠ High';
 
   html += `<tr class="total-row">
-    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${sorted.length} garages)</td>
+    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${rows.length} garages)</td>
     <td class="num">${fmtCurrencyFull(totals.garageRevenue)}</td>
     <td class="num">${fmtNum(totals.invoices)}</td>
     <td class="num">${fmtCurrencyFull(totals.subscriptionPaid)}</td>
@@ -561,10 +658,29 @@ function renderGarageTable(filtered){
     body.innerHTML = `<tr><td colspan="11" class="no-data-msg"><i class="fas fa-inbox"></i>No garages match</td></tr>`;
     return;
   }
-  const sorted = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue);
+
+  const getters = {
+    name:         g => g.name.toLowerCase(),
+    location:     g => (g.location || '').toLowerCase(),
+    contract:     g => g.contract,
+    cleared:      g => g.cleared,
+    outstanding:  g => g.outstanding,
+    invoices:     g => metricsForPeriod(g).invoice,
+    invoiceValue: g => metricsForPeriod(g).invoiceValue,
+    commission:   g => metricsForPeriod(g).commission,
+    commPct:      g => metricsForPeriod(g).commissionPct,
+    leads:        g => g.leads
+  };
+  let rows;
+  if(sortState['garageTable']){
+    rows = applySort(filtered, 'garageTable', getters);
+  } else {
+    rows = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue);
+  }
+
   let html = '';
   const totals = { contract:0, cleared:0, outstanding:0, invoices:0, invoiceValue:0, commission:0, leads:0 };
-  sorted.forEach((g, i) => {
+  rows.forEach((g, i) => {
     const m = metricsForPeriod(g);
     totals.contract += g.contract;
     totals.cleared += g.cleared;
@@ -577,11 +693,8 @@ function renderGarageTable(filtered){
     const locCls = (g.location || '').toLowerCase() === 'delhi' ? 'location-pill delhi' : 'location-pill';
     const zeroCls = m.invoiceValue === 0 && state.month !== 'all' ? 'zero-row' : '';
 
-    /* ===== FIX 1: Comm % pill color (red / amber / green) ===== */
     const commPctValue = m.commissionPct * 100;
     const commPillCls = commissionPctClass(commPctValue);
-
-    /* ===== FIX 2: Invoice Value turns green when it exceeds Cleared ===== */
     const invGreenCls = m.invoiceValue > g.cleared ? 'money green' : 'money';
 
     html += `<tr class="${zeroCls}">
@@ -601,7 +714,7 @@ function renderGarageTable(filtered){
   const overallCommPct = totals.invoiceValue ? (totals.commission / totals.invoiceValue) * 100 : 0;
   const totalPillCls = commissionPctClass(overallCommPct);
   html += `<tr class="total-row">
-    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${sorted.length} garages)</td>
+    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${rows.length} garages)</td>
     <td class="num">${fmtCurrencyFull(totals.contract)}</td>
     <td class="num">${fmtCurrencyFull(totals.cleared)}</td>
     <td class="num">${fmtCurrencyFull(totals.outstanding)}</td>
@@ -621,9 +734,9 @@ function renderMonthlyTable(filtered){
   const tbody = document.getElementById('monthlyBody');
   const now = new Date();
   const currentMonthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][now.getMonth()];
-  let html = '';
-  const totals = { invoice:0, invoiceValue:0, commission:0 };
-  MONTHS.forEach(m => {
+
+  // Build row data first (so we can sort it)
+  const rowData = MONTHS.map(m => {
     let invoice=0, invoiceValue=0, commission=0;
     filtered.forEach(g => {
       invoice += g.monthly[m].invoice;
@@ -632,19 +745,34 @@ function renderMonthlyTable(filtered){
     });
     const avgBilling = invoice ? (invoiceValue/invoice) : 0;
     const commPct = invoiceValue ? (commission/invoiceValue) : 0;
-    totals.invoice += invoice;
-    totals.invoiceValue += invoiceValue;
-    totals.commission += commission;
-    const isCurrent = m === currentMonthName;
+    return { month:m, invoice, invoiceValue, commission, avgBilling, commPct };
+  });
+
+  const getters = {
+    invoices:     r => r.invoice,
+    invoiceValue: r => r.invoiceValue,
+    commission:   r => r.commission,
+    avgBilling:   r => r.avgBilling,
+    commPct:      r => r.commPct
+  };
+  const sorted = sortState['monthlyTable'] ? applySort(rowData, 'monthlyTable', getters) : rowData;
+
+  const totals = { invoice:0, invoiceValue:0, commission:0 };
+  let html = '';
+  sorted.forEach(r => {
+    totals.invoice += r.invoice;
+    totals.invoiceValue += r.invoiceValue;
+    totals.commission += r.commission;
+    const isCurrent = r.month === currentMonthName;
     const rowCls = isCurrent ? 'total-row' : '';
-    const active = state.month === m ? ' style="background:#f0fdf4;"' : '';
+    const active = state.month === r.month ? ' style="background:#f0fdf4;"' : '';
     html += `<tr class="${rowCls}"${active}>
-      <td><strong>${m}</strong>${isCurrent ? ' <span style="font-size:10px;color:#059669;">● current</span>' : ''}</td>
-      <td class="num">${fmtNum(invoice)}</td>
-      <td class="num money">${fmtCurrencyFull(invoiceValue)}</td>
-      <td class="num money revenue">${fmtCurrencyFull(commission)}</td>
-      <td class="num money">${fmtCurrencyFull(avgBilling)}</td>
-      <td class="num">${(commPct*100).toFixed(2)}%</td>
+      <td><strong>${r.month}</strong>${isCurrent ? ' <span style="font-size:10px;color:#059669;">● current</span>' : ''}</td>
+      <td class="num">${fmtNum(r.invoice)}</td>
+      <td class="num money">${fmtCurrencyFull(r.invoiceValue)}</td>
+      <td class="num money revenue">${fmtCurrencyFull(r.commission)}</td>
+      <td class="num money">${fmtCurrencyFull(r.avgBilling)}</td>
+      <td class="num">${(r.commPct*100).toFixed(2)}%</td>
     </tr>`;
   });
   const tAvg = totals.invoice ? (totals.invoiceValue/totals.invoice) : 0;
@@ -680,12 +808,7 @@ function initCharts(){
       labels: MONTHS.map(m => m.slice(0,3)),
       datasets:[{
         label:'Carqure Revenue (₹)',
-        data:[],
-        backgroundColor:[],
-        borderColor:[],
-        borderWidth:1,
-        borderRadius:6,
-        borderSkipped:false
+        data:[], backgroundColor:[], borderColor:[], borderWidth:1, borderRadius:6, borderSkipped:false
       }]
     },
     options:{
@@ -838,7 +961,6 @@ function downloadExcel(){
   const filtered = applyFilters(RAW_GARAGES);
   const periodLabel = state.month === 'all' ? 'Overall' : state.month;
 
-  // Sheet 1: Garage Revenue vs Subscription Paid
   const profitRows = filtered
     .slice()
     .sort((a, b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue)
@@ -848,17 +970,13 @@ function downloadExcel(){
       const subscriptionPaid = g.cleared;
       const ratio = garageRevenue > 0 ? (subscriptionPaid / garageRevenue) * 100 : 0;
       return {
-        '#': i+1,
-        'Garage Name': g.name,
-        'Location': g.location,
-        'Garage Revenue': garageRevenue,
-        'Invoices': m.invoice,
+        '#': i+1, 'Garage Name': g.name, 'Location': g.location,
+        'Garage Revenue': garageRevenue, 'Invoices': m.invoice,
         'Subscription Paid': subscriptionPaid,
         'Payment Ratio %': Number(ratio.toFixed(2)),
       };
     });
 
-  // Sheet 2: Garage Revenue Full
   const garageRows = filtered.map((g, i) => {
     const m = metricsForPeriod(g);
     return {
@@ -872,7 +990,6 @@ function downloadExcel(){
     };
   });
 
-  // Sheet 3: Monthly Breakdown
   const monthlyRows = MONTHS.map(m => {
     let inv=0, val=0, comm=0;
     filtered.forEach(g => {
@@ -936,10 +1053,13 @@ async function syncFromZoho(){
 
 function resetAll(){
   state = { location: '', garage: '', month: 'all', search: '' };
+  // Clear any active sorts too
+  Object.keys(sortState).forEach(k => delete sortState[k]);
   document.getElementById('filterLocation').value = '';
   document.getElementById('filterGarage').value = '';
   document.getElementById('filterSearch').value = '';
   document.querySelectorAll('.month-tab').forEach(t => t.classList.toggle('active', t.dataset.month === 'all'));
+  updateSortIndicators();
   renderAll();
 }
 
@@ -947,6 +1067,7 @@ function init(){
   document.getElementById('currentDate').textContent =
     new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   initCharts();
+  wireSortableHeaders();
 
   document.getElementById('filterLocation').addEventListener('change', function(){ state.location = this.value; renderAll(); });
   document.getElementById('filterGarage').addEventListener('change',   function(){ state.garage   = this.value; renderAll(); });
