@@ -62,16 +62,31 @@ body{background:#f0f4f9;padding:20px;min-height:100vh}
 .kpi-card.teal .label i{color:#0d9488}
 .kpi-card.indigo .label i{color:#4f46e5}
 .kpi-card.cyan .label i{color:#0891b2}
+.kpi-card.gold{background:linear-gradient(135deg,#fff 0%,#fef9e7 100%);border:1px solid #fde68a;box-shadow:0 4px 14px rgba(217,119,6,.12)}
+.kpi-card.gold .label i{color:#d97706}
+.kpi-card.gold .value{color:#92400e}
+.kpi-card.gold::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#d97706)}
+.kpi-card.profit{background:linear-gradient(135deg,#fff 0%,#f0fdf4 100%);border:1px solid #86efac;box-shadow:0 4px 14px rgba(22,163,74,.12)}
+.kpi-card.profit .label i{color:#16a34a}
+.kpi-card.profit .value{color:#065f46}
+.kpi-card.profit::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#16a34a,#059669)}
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.chart-row.full{grid-template-columns:1fr}
 .chart-box{background:#fff;border-radius:16px;padding:16px 16px 10px;border:1px solid #eef2f6;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .chart-box .chart-title{font-size:13px;font-weight:600;color:#0b1a33;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .chart-box .chart-title i{color:#059669}
+.chart-box.revenue-highlight{border:1px solid #fde68a;background:linear-gradient(135deg,#fff 0%,#fffbeb 100%)}
+.chart-box.revenue-highlight .chart-title i{color:#d97706}
 .chart-box .chart-wrap{position:relative;height:250px}
+.chart-box .chart-wrap.tall{height:290px}
 .table-wrap{background:#fff;border-radius:16px;border:1px solid #eef2f6;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.03);margin-bottom:20px}
+.table-wrap.highlight{border:1px solid #86efac;box-shadow:0 4px 14px rgba(22,163,74,.08)}
 .table-header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid #f1f5f9}
 .table-header h3{font-size:15px;font-weight:600;color:#0b1a33}
 .table-header h3 i{color:#059669;margin-right:8px}
+.table-wrap.highlight .table-header h3 i{color:#16a34a}
 .table-count{font-size:12px;color:#64748b;background:#f1f5f9;padding:4px 14px;border-radius:40px}
+.table-note{padding:10px 20px 4px;font-size:11.5px;color:#64748b;line-height:1.5}
 .table-scroll{overflow-x:auto;padding:0 4px 4px}
 table.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
 table.data-table thead{background:#f8fafc;border-bottom:1px solid #e2e8f0}
@@ -83,15 +98,26 @@ table.data-table tbody tr:hover{background:#fafcff}
 table.data-table tbody tr.total-row{background:#f0fdf4;font-weight:700;border-top:2px solid #86efac}
 table.data-table tbody tr.total-row td{color:#065f46;padding-top:12px;padding-bottom:12px}
 table.data-table tbody tr.zero-row{opacity:.5}
+table.data-table tbody tr.loss-row{background:#fef2f2}
+table.data-table tbody tr.loss-row:hover{background:#fee2e2}
 .money{font-variant-numeric:tabular-nums}
 .money.pos{color:#15803d;font-weight:600}
 .money.neg{color:#b91c1c;font-weight:600}
 .money.out{color:#b45309;font-weight:600}
+.money.revenue{color:#d97706;font-weight:700}
 .pct-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dcfce7;color:#166534}
 .pct-pill.warn{background:#fef3c7;color:#92400e}
 .pct-pill.danger{background:#fee2e2;color:#b91c1c}
+.status-pill{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.status-pill.profit{background:#dcfce7;color:#166534}
+.status-pill.loss{background:#fee2e2;color:#991b1b}
+.status-pill.breakeven{background:#fef3c7;color:#92400e}
 .location-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:600;background:#dbeafe;color:#1e40af}
 .location-pill.delhi{background:#fce7f3;color:#9d174d}
+.roi-bar{position:relative;height:6px;background:#f1f5f9;border-radius:20px;overflow:hidden;min-width:60px;display:inline-block;width:80px;vertical-align:middle;margin-right:6px}
+.roi-bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:20px;background:#16a34a}
+.roi-bar .fill.loss{background:#dc2626}
+.roi-bar .fill.mid{background:#d97706}
 .no-data-msg{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px}
 .no-data-msg i{font-size:36px;display:block;margin-bottom:10px;color:#cbd5e1}
 @media(max-width:1100px){.chart-row{grid-template-columns:1fr}}
@@ -158,6 +184,18 @@ table.data-table tbody tr.zero-row{opacity:.5}
   </nav>
 
   <section class="kpi-grid">
+    <div class="kpi-card profit">
+      <div class="label"><i class="fas fa-store"></i> Garage Revenue</div>
+      <div class="value small" id="kpiGarageRevenue">₹0</div>
+      <div class="sub" id="kpiGarageRevenueSub">—</div>
+    </div>
+
+    <div class="kpi-card gold">
+      <div class="label"><i class="fas fa-coins"></i> Carquire Revenue</div>
+      <div class="value small" id="kpiRevenue">₹0</div>
+      <div class="sub" id="kpiRevenueSub">—</div>
+    </div>
+
     <div class="kpi-card green">
       <div class="label"><i class="fas fa-file-contract"></i> Contract Value</div>
       <div class="value small" id="kpiContract">₹0</div>
@@ -180,16 +218,6 @@ table.data-table tbody tr.zero-row{opacity:.5}
       <div class="value" id="kpiInvoices">0</div>
       <div class="sub" id="kpiInvoicesSub">—</div>
     </div>
-    <div class="kpi-card teal">
-      <div class="label"><i class="fas fa-rupee-sign"></i> Invoice Value</div>
-      <div class="value small" id="kpiInvoiceValue">₹0</div>
-      <div class="sub" id="kpiInvoiceValueSub">—</div>
-    </div>
-    <div class="kpi-card rose">
-      <div class="label"><i class="fas fa-percentage"></i> Total Commission</div>
-      <div class="value small" id="kpiCommission">₹0</div>
-      <div class="sub" id="kpiCommissionSub">—</div>
-    </div>
     <div class="kpi-card indigo">
       <div class="label"><i class="fas fa-chart-line"></i> Avg Commission %</div>
       <div class="value" id="kpiAvgCommission">0%</div>
@@ -209,11 +237,50 @@ table.data-table tbody tr.zero-row{opacity:.5}
     </div>
   </section>
 
+  <div class="chart-row full">
+    <div class="chart-box revenue-highlight">
+      <div class="chart-title"><i class="fas fa-coins"></i> Carquire Revenue by Month <span style="font-size:11px;font-weight:400;color:#a16207;margin-left:6px;">(Commission earned per month)</span></div>
+      <div class="chart-wrap tall"><canvas id="chartRevenueByMonth"></canvas></div>
+    </div>
+  </div>
+
   <div class="chart-row">
     <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Top 10 Garages by Invoice Value</div><div class="chart-wrap"><canvas id="chartTopGarages"></canvas></div></div>
     <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-bar"></i> Contract vs Cleared vs Outstanding</div><div class="chart-wrap"><canvas id="chartContract"></canvas></div></div>
     <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-pie"></i> Location Share</div><div class="chart-wrap"><canvas id="chartLocation"></canvas></div></div>
     <div class="chart-box"><div class="chart-title"><i class="fas fa-chart-line"></i> Monthly Revenue Trend</div><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
+  </div>
+
+  <!-- ===== NEW: Garage Revenue vs Subscription Paid Table ===== -->
+  <div class="table-wrap highlight">
+    <div class="table-header">
+      <h3><i class="fas fa-store"></i> Garage Revenue vs Subscription Paid — Per Garage</h3>
+      <span class="table-count" id="profitTableCount">0 garages</span>
+    </div>
+    <div class="table-note">
+      <strong>Garage Revenue</strong> = total invoice value billed by the garage to its customers. &nbsp;•&nbsp;
+      <strong>Subscription Paid</strong> = amount the garage has paid to Carquire. &nbsp;•&nbsp;
+      <strong>Payment Ratio</strong> = Subscription Paid ÷ Garage Revenue → shows what % of the garage's billing they're paying Carquire. Lower is better for the garage.
+    </div>
+    <div class="table-scroll">
+      <table class="data-table" id="profitTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Garage</th>
+            <th>Location</th>
+            <th class="num">Garage Revenue</th>
+            <th class="num">Invoices</th>
+            <th class="num">Subscription Paid</th>
+            <th class="num">Payment Ratio</th>
+            <th class="num">Status</th>
+          </tr>
+        </thead>
+        <tbody id="profitBody">
+          <tr><td colspan="8" class="no-data-msg"><i class="fas fa-cloud-download-alt"></i>Fetching from Zoho...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="table-wrap">
@@ -232,9 +299,7 @@ table.data-table tbody tr.zero-row{opacity:.5}
             <th class="num">Comm %</th><th class="num">Leads</th>
           </tr>
         </thead>
-        <tbody id="garageBody">
-          <tr><td colspan="11" class="no-data-msg"><i class="fas fa-cloud-download-alt"></i>Fetching from Zoho...</td></tr>
-        </tbody>
+        <tbody id="garageBody"></tbody>
       </table>
     </div>
   </div>
@@ -271,9 +336,6 @@ let RAW_GARAGES = [];
 let charts = {};
 let state = { location: '', garage: '', month: 'all', search: '' };
 
-/* ============================================================
-   FORMATTING
-============================================================= */
 function fmtCurrency(v){
   const n = Number(v) || 0;
   if(Math.abs(n) >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
@@ -285,9 +347,6 @@ function fmtCurrencyFull(v){ return '₹' + Math.round(Number(v)||0).toLocaleStr
 function fmtNum(v){ return (Number(v) || 0).toLocaleString('en-IN'); }
 function pctClsFromString(p){ const n=Number(p)||0; if(n>=20) return 'danger'; if(n>=12) return 'warn'; return ''; }
 
-/* ============================================================
-   PARSE — backend now returns named fields directly
-============================================================= */
 function parseRevenueRecords(records){
   if(!records || !records.length) return [];
   return records
@@ -322,9 +381,6 @@ function parseRevenueRecords(records){
     });
 }
 
-/* ============================================================
-   FILTERS
-============================================================= */
 function applyFilters(data){
   return data.filter(g => {
     if(state.location && g.location !== state.location) return false;
@@ -372,6 +428,15 @@ function renderKPIs(filtered){
   const avgComm    = invoiceValue ? (commission / invoiceValue) : 0;
   const completion = leads ? (invoices / leads) * 100 : 0;
 
+  // Garage Revenue = total invoice value billed by garages
+  document.getElementById('kpiGarageRevenue').textContent = fmtCurrency(invoiceValue);
+  document.getElementById('kpiGarageRevenueSub').textContent = `${filtered.length} garages • ${fmtCurrencyFull(invoiceValue)}`;
+
+  // Carquire Revenue = total commission
+  document.getElementById('kpiRevenue').textContent = fmtCurrency(commission);
+  const periodLabel = state.month === 'all' ? 'All months' : state.month;
+  document.getElementById('kpiRevenueSub').textContent = `${periodLabel} • ${fmtCurrencyFull(commission)}`;
+
   document.getElementById('kpiContract').textContent = fmtCurrency(contract);
   document.getElementById('kpiContractSub').textContent = `${filtered.length} garages • ${fmtCurrencyFull(contract)}`;
 
@@ -386,12 +451,6 @@ function renderKPIs(filtered){
   document.getElementById('kpiInvoices').textContent = fmtNum(invoices);
   document.getElementById('kpiInvoicesSub').textContent = state.month === 'all' ? 'All months' : state.month;
 
-  document.getElementById('kpiInvoiceValue').textContent = fmtCurrency(invoiceValue);
-  document.getElementById('kpiInvoiceValueSub').textContent = fmtCurrencyFull(invoiceValue);
-
-  document.getElementById('kpiCommission').textContent = fmtCurrency(commission);
-  document.getElementById('kpiCommissionSub').textContent = fmtCurrencyFull(commission);
-
   document.getElementById('kpiAvgCommission').textContent = (avgComm * 100).toFixed(2) + '%';
   document.getElementById('kpiAvgCommissionSub').textContent = 'Commission ÷ Invoice Value';
 
@@ -404,6 +463,81 @@ function renderKPIs(filtered){
   bar.style.width = Math.min(completion, 100) + '%';
   bar.className = 'fill' + (completion < 50 ? ' danger' : completion < 80 ? ' warn' : '');
   document.getElementById('kpiCompletionSub').textContent = `${fmtNum(invoices)} invoices / ${fmtNum(leads)} leads`;
+}
+
+/* ============================================================
+   Garage Revenue vs Subscription Paid Table
+============================================================= */
+function renderProfitTable(filtered){
+  const body = document.getElementById('profitBody');
+  document.getElementById('profitTableCount').textContent = `${filtered.length} garages`;
+  if(!filtered.length){
+    body.innerHTML = `<tr><td colspan="8" class="no-data-msg"><i class="fas fa-inbox"></i>No garages match</td></tr>`;
+    return;
+  }
+
+  // Sort: biggest garage revenue first
+  const sorted = filtered.slice().sort((a, b) => {
+    return metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue;
+  });
+
+  const totals = { garageRevenue: 0, subscriptionPaid: 0, invoices: 0 };
+  let html = '';
+  sorted.forEach((g, i) => {
+    const m = metricsForPeriod(g);
+    const garageRevenue = m.invoiceValue;
+    const subscriptionPaid = g.cleared;
+    const invoices = m.invoice;
+
+    totals.garageRevenue += garageRevenue;
+    totals.subscriptionPaid += subscriptionPaid;
+    totals.invoices += invoices;
+
+    const ratio = garageRevenue > 0 ? (subscriptionPaid / garageRevenue) * 100 : 0;
+
+    let statusCls, statusTxt;
+    if(ratio === 0) { statusCls = 'breakeven'; statusTxt = '⚖ No Payment'; }
+    else if(ratio < 1)  { statusCls = 'profit'; statusTxt = '✓ Low Ratio'; }
+    else if(ratio < 3)  { statusCls = 'profit'; statusTxt = '✓ Healthy'; }
+    else if(ratio < 8)  { statusCls = 'breakeven'; statusTxt = '⚠ Moderate'; }
+    else                { statusCls = 'loss';   statusTxt = '⚠ High Ratio'; }
+
+    const locCls = (g.location || '').toLowerCase() === 'delhi' ? 'location-pill delhi' : 'location-pill';
+    const rowCls = ratio > 8 ? 'loss-row' : '';
+
+    let barPct = Math.min(ratio, 100);
+    let barCls = ratio < 3 ? '' : ratio < 8 ? 'mid' : 'loss';
+    const ratioDisplay = garageRevenue > 0 ? ratio.toFixed(2) + '%' : '—';
+
+    html += `<tr class="${rowCls}">
+      <td>${i+1}</td>
+      <td><strong>${g.name}</strong></td>
+      <td><span class="${locCls}">${g.location || '—'}</span></td>
+      <td class="num money revenue">${fmtCurrencyFull(garageRevenue)}</td>
+      <td class="num">${fmtNum(invoices)}</td>
+      <td class="num money pos">${fmtCurrencyFull(subscriptionPaid)}</td>
+      <td class="num" style="white-space:nowrap;">
+        <span class="roi-bar"><span class="fill ${barCls}" style="width:${barPct}%"></span></span>
+        ${ratioDisplay}
+      </td>
+      <td class="num"><span class="status-pill ${statusCls}">${statusTxt}</span></td>
+    </tr>`;
+  });
+
+  const overallRatio = totals.garageRevenue > 0 ? (totals.subscriptionPaid / totals.garageRevenue) * 100 : 0;
+  const overallStatusCls = overallRatio < 3 ? 'profit' : overallRatio < 8 ? 'breakeven' : 'loss';
+  const overallStatusTxt = overallRatio < 3 ? '✓ Healthy' : overallRatio < 8 ? '⚠ Moderate' : '⚠ High';
+
+  html += `<tr class="total-row">
+    <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${sorted.length} garages)</td>
+    <td class="num">${fmtCurrencyFull(totals.garageRevenue)}</td>
+    <td class="num">${fmtNum(totals.invoices)}</td>
+    <td class="num">${fmtCurrencyFull(totals.subscriptionPaid)}</td>
+    <td class="num">${overallRatio.toFixed(2)}%</td>
+    <td class="num"><span class="status-pill ${overallStatusCls}">${overallStatusTxt}</span></td>
+  </tr>`;
+
+  body.innerHTML = html;
 }
 
 /* ============================================================
@@ -440,7 +574,7 @@ function renderGarageTable(filtered){
       <td class="num ${outCls}">${fmtCurrencyFull(g.outstanding)}</td>
       <td class="num">${fmtNum(m.invoice)}</td>
       <td class="num money">${fmtCurrencyFull(m.invoiceValue)}</td>
-      <td class="num money">${fmtCurrencyFull(m.commission)}</td>
+      <td class="num money revenue">${fmtCurrencyFull(m.commission)}</td>
       <td class="num"><span class="pct-pill ${pctClsFromString(m.commissionPct * 100)}">${(m.commissionPct * 100).toFixed(2)}%</span></td>
       <td class="num">${fmtNum(g.leads)}</td>
     </tr>`;
@@ -488,7 +622,7 @@ function renderMonthlyTable(filtered){
       <td><strong>${m}</strong>${isCurrent ? ' <span style="font-size:10px;color:#059669;">● current</span>' : ''}</td>
       <td class="num">${fmtNum(invoice)}</td>
       <td class="num money">${fmtCurrencyFull(invoiceValue)}</td>
-      <td class="num money">${fmtCurrencyFull(commission)}</td>
+      <td class="num money revenue">${fmtCurrencyFull(commission)}</td>
       <td class="num money">${fmtCurrencyFull(avgBilling)}</td>
       <td class="num">${(commPct*100).toFixed(2)}%</td>
     </tr>`;
@@ -519,6 +653,43 @@ function initCharts(){
       x:{ grid:{ display:false }, ticks:{ font:{ size:9 }, maxRotation:40, minRotation:30 } }
     }
   });
+
+  charts.revenueByMonth = new Chart(document.getElementById('chartRevenueByMonth'), {
+    type:'bar',
+    data:{
+      labels: MONTHS.map(m => m.slice(0,3)),
+      datasets:[{
+        label:'Carquire Revenue (₹)',
+        data:[],
+        backgroundColor:[],
+        borderColor:[],
+        borderWidth:1,
+        borderRadius:6,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: ctx => 'Revenue: ' + fmtCurrencyFull(ctx.parsed.y) } }
+      },
+      scales:{
+        y:{ beginAtZero:true, grid:{ color:'#fef3c7' }, ticks:{ font:{ size:10 }, callback: v => fmtCurrency(v) } },
+        x:{ grid:{ display:false }, ticks:{ font:{ size:11 }, color:'#92400e', font:{ weight:'600' } } }
+      },
+      onClick: (evt, els) => {
+        if(els.length){
+          const idx = els[0].index;
+          const month = MONTHS[idx];
+          state.month = month;
+          document.querySelectorAll('.month-tab').forEach(x => x.classList.toggle('active', x.dataset.month === state.month));
+          renderAll();
+        }
+      }
+    }
+  });
+
   charts.top = new Chart(document.getElementById('chartTopGarages'), {
     type:'bar',
     data:{ labels:[], datasets:[{ label:'Invoice Value', data:[], backgroundColor:'#059669', borderRadius:5 }] },
@@ -556,6 +727,25 @@ function initCharts(){
 }
 
 function updateCharts(filtered){
+  const revenuesByMonth = [];
+  MONTHS.forEach(m => {
+    let rev = 0;
+    filtered.forEach(g => { rev += g.monthly[m].commission; });
+    revenuesByMonth.push(rev);
+  });
+  const maxRev = Math.max(...revenuesByMonth, 0);
+  const bg = MONTHS.map((m, i) => {
+    if(state.month === m) return '#d97706';
+    if(revenuesByMonth[i] === maxRev && maxRev > 0) return '#f59e0b';
+    return 'rgba(245,158,11,.55)';
+  });
+  const border = MONTHS.map(m => state.month === m ? '#92400e' : '#d97706');
+
+  charts.revenueByMonth.data.datasets[0].data = revenuesByMonth;
+  charts.revenueByMonth.data.datasets[0].backgroundColor = bg;
+  charts.revenueByMonth.data.datasets[0].borderColor = border;
+  charts.revenueByMonth.update();
+
   const sorted = filtered.slice().sort((a,b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue).slice(0, 10);
   charts.top.data.labels = sorted.map(g => g.name);
   charts.top.data.datasets[0].data = sorted.map(g => metricsForPeriod(g).invoiceValue);
@@ -597,6 +787,7 @@ function updateCharts(filtered){
 function renderAll(){
   const filtered = applyFilters(RAW_GARAGES);
   renderKPIs(filtered);
+  renderProfitTable(filtered);
   renderGarageTable(filtered);
   renderMonthlyTable(filtered);
   updateCharts(filtered);
@@ -627,6 +818,27 @@ function downloadExcel(){
   const filtered = applyFilters(RAW_GARAGES);
   const periodLabel = state.month === 'all' ? 'Overall' : state.month;
 
+  // Sheet 1: Garage Revenue vs Subscription Paid
+  const profitRows = filtered
+    .slice()
+    .sort((a, b) => metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue)
+    .map((g, i) => {
+      const m = metricsForPeriod(g);
+      const garageRevenue = m.invoiceValue;
+      const subscriptionPaid = g.cleared;
+      const ratio = garageRevenue > 0 ? (subscriptionPaid / garageRevenue) * 100 : 0;
+      return {
+        '#': i+1,
+        'Garage Name': g.name,
+        'Location': g.location,
+        'Garage Revenue': garageRevenue,
+        'Invoices': m.invoice,
+        'Subscription Paid': subscriptionPaid,
+        'Payment Ratio %': Number(ratio.toFixed(2)),
+      };
+    });
+
+  // Sheet 2: Garage Revenue Full
   const garageRows = filtered.map((g, i) => {
     const m = metricsForPeriod(g);
     return {
@@ -634,31 +846,13 @@ function downloadExcel(){
       'Contract Value': g.contract, 'Cleared Net Amount': g.cleared,
       'Outstanding': g.outstanding,
       'Total Invoices': m.invoice, 'Invoice Value': m.invoiceValue,
-      'Commission': m.commission,
+      'Carquire Commission': m.commission,
       'Commission %': Number((m.commissionPct*100).toFixed(2)),
       'Avg Billing': m.avgBilling, 'Committed Leads': g.leads,
     };
   });
-  if(garageRows.length){
-    const tot = { contract:0, cleared:0, outstanding:0, invoice:0, invoiceValue:0, commission:0, leads:0 };
-    filtered.forEach(g => {
-      const m = metricsForPeriod(g);
-      tot.contract += g.contract; tot.cleared += g.cleared; tot.outstanding += g.outstanding;
-      tot.invoice += m.invoice; tot.invoiceValue += m.invoiceValue;
-      tot.commission += m.commission; tot.leads += g.leads;
-    });
-    garageRows.push({
-      '#': 'TOTAL', 'Garage Name': `${filtered.length} garages`, 'Location': '',
-      'Contract Value': tot.contract, 'Cleared Net Amount': tot.cleared,
-      'Outstanding': tot.outstanding,
-      'Total Invoices': tot.invoice, 'Invoice Value': tot.invoiceValue,
-      'Commission': tot.commission,
-      'Commission %': tot.invoiceValue ? Number(((tot.commission/tot.invoiceValue)*100).toFixed(2)) : 0,
-      'Avg Billing': tot.invoice ? Math.round(tot.invoiceValue/tot.invoice) : 0,
-      'Committed Leads': tot.leads,
-    });
-  }
 
+  // Sheet 3: Monthly Breakdown
   const monthlyRows = MONTHS.map(m => {
     let inv=0, val=0, comm=0;
     filtered.forEach(g => {
@@ -668,13 +862,18 @@ function downloadExcel(){
     });
     return {
       'Month': m, 'Invoices': inv, 'Invoice Value': val,
-      'Commission': comm,
+      'Carquire Commission': comm,
       'Avg Billing': inv ? Math.round(val/inv) : 0,
       'Commission %': val ? Number(((comm/val)*100).toFixed(2)) : 0,
     };
   });
 
   const wb = XLSX.utils.book_new();
+  if(profitRows.length){
+    const ws0 = XLSX.utils.json_to_sheet(profitRows);
+    ws0['!cols'] = [{wch:5},{wch:30},{wch:12},{wch:18},{wch:12},{wch:18},{wch:15}];
+    XLSX.utils.book_append_sheet(wb, ws0, 'Garage Revenue vs Subs');
+  }
   if(garageRows.length){
     const ws1 = XLSX.utils.json_to_sheet(garageRows);
     ws1['!cols'] = [{wch:5},{wch:30},{wch:12},{wch:16},{wch:18},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:14},{wch:14}];
@@ -715,9 +914,6 @@ async function syncFromZoho(){
   }
 }
 
-/* ============================================================
-   RESET
-============================================================= */
 function resetAll(){
   state = { location: '', garage: '', month: 'all', search: '' };
   document.getElementById('filterLocation').value = '';
@@ -727,9 +923,6 @@ function resetAll(){
   renderAll();
 }
 
-/* ============================================================
-   INIT
-============================================================= */
 function init(){
   document.getElementById('currentDate').textContent =
     new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
