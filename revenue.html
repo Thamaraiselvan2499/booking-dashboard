@@ -105,6 +105,7 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
 .money.neg{color:#b91c1c;font-weight:600}
 .money.out{color:#b45309;font-weight:600}
 .money.revenue{color:#d97706;font-weight:700}
+.money.green{color:#15803d;font-weight:700}
 .pct-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dcfce7;color:#166534}
 .pct-pill.warn{background:#fef3c7;color:#92400e}
 .pct-pill.danger{background:#fee2e2;color:#b91c1c}
@@ -191,7 +192,7 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
     </div>
 
     <div class="kpi-card gold">
-      <div class="label"><i class="fas fa-coins"></i> Carquire Revenue</div>
+      <div class="label"><i class="fas fa-coins"></i> Carqure Revenue</div>
       <div class="value small" id="kpiRevenue">₹0</div>
       <div class="sub" id="kpiRevenueSub">—</div>
     </div>
@@ -239,7 +240,7 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
 
   <div class="chart-row full">
     <div class="chart-box revenue-highlight">
-      <div class="chart-title"><i class="fas fa-coins"></i> Carquire Revenue by Month <span style="font-size:11px;font-weight:400;color:#a16207;margin-left:6px;">(Commission earned per month)</span></div>
+      <div class="chart-title"><i class="fas fa-coins"></i> Carqure Revenue by Month <span style="font-size:11px;font-weight:400;color:#a16207;margin-left:6px;">(Commission earned per month)</span></div>
       <div class="chart-wrap tall"><canvas id="chartRevenueByMonth"></canvas></div>
     </div>
   </div>
@@ -259,8 +260,8 @@ table.data-table tbody tr.loss-row:hover{background:#fee2e2}
     </div>
     <div class="table-note">
       <strong>Garage Revenue</strong> = total invoice value billed by the garage to its customers. &nbsp;•&nbsp;
-      <strong>Subscription Paid</strong> = amount the garage has paid to Carquire. &nbsp;•&nbsp;
-      <strong>Payment Ratio</strong> = Subscription Paid ÷ Garage Revenue → shows what % of the garage's billing they're paying Carquire. Lower is better for the garage.
+      <strong>Subscription Paid</strong> = amount the garage has paid to Carqure. &nbsp;•&nbsp;
+      <strong>Payment Ratio</strong> = Subscription Paid ÷ Garage Revenue → shows what % of the garage's billing they're paying Carqure. Lower is better for the garage.
     </div>
     <div class="table-scroll">
       <table class="data-table" id="profitTable">
@@ -345,7 +346,18 @@ function fmtCurrency(v){
 }
 function fmtCurrencyFull(v){ return '₹' + Math.round(Number(v)||0).toLocaleString('en-IN'); }
 function fmtNum(v){ return (Number(v) || 0).toLocaleString('en-IN'); }
-function pctClsFromString(p){ const n=Number(p)||0; if(n>=20) return 'danger'; if(n>=12) return 'warn'; return ''; }
+
+/* ===== FIX 1: Commission % color rule =====
+   0–10%  → red   (.pct-pill.danger)
+   10–12% → amber (.pct-pill.warn)
+   >12%   → green (.pct-pill default)
+   Input is the percentage value (e.g. 15.81), not the fraction. */
+function commissionPctClass(pct){
+  const n = Number(pct) || 0;
+  if(n < 10)  return 'danger';
+  if(n <= 12) return 'warn';
+  return '';
+}
 
 function parseRevenueRecords(records){
   if(!records || !records.length) return [];
@@ -432,7 +444,7 @@ function renderKPIs(filtered){
   document.getElementById('kpiGarageRevenue').textContent = fmtCurrency(invoiceValue);
   document.getElementById('kpiGarageRevenueSub').textContent = `${filtered.length} garages • ${fmtCurrencyFull(invoiceValue)}`;
 
-  // Carquire Revenue = total commission
+  // Carqure Revenue = total commission
   document.getElementById('kpiRevenue').textContent = fmtCurrency(commission);
   const periodLabel = state.month === 'all' ? 'All months' : state.month;
   document.getElementById('kpiRevenueSub').textContent = `${periodLabel} • ${fmtCurrencyFull(commission)}`;
@@ -476,7 +488,6 @@ function renderProfitTable(filtered){
     return;
   }
 
-  // Sort: biggest garage revenue first
   const sorted = filtered.slice().sort((a, b) => {
     return metricsForPeriod(b).invoiceValue - metricsForPeriod(a).invoiceValue;
   });
@@ -565,6 +576,14 @@ function renderGarageTable(filtered){
     const outCls = g.outstanding > 0 ? 'money out' : 'money pos';
     const locCls = (g.location || '').toLowerCase() === 'delhi' ? 'location-pill delhi' : 'location-pill';
     const zeroCls = m.invoiceValue === 0 && state.month !== 'all' ? 'zero-row' : '';
+
+    /* ===== FIX 1: Comm % pill color (red / amber / green) ===== */
+    const commPctValue = m.commissionPct * 100;
+    const commPillCls = commissionPctClass(commPctValue);
+
+    /* ===== FIX 2: Invoice Value turns green when it exceeds Cleared ===== */
+    const invGreenCls = m.invoiceValue > g.cleared ? 'money green' : 'money';
+
     html += `<tr class="${zeroCls}">
       <td>${i+1}</td>
       <td><strong>${g.name}</strong></td>
@@ -573,13 +592,14 @@ function renderGarageTable(filtered){
       <td class="num money pos">${fmtCurrencyFull(g.cleared)}</td>
       <td class="num ${outCls}">${fmtCurrencyFull(g.outstanding)}</td>
       <td class="num">${fmtNum(m.invoice)}</td>
-      <td class="num money">${fmtCurrencyFull(m.invoiceValue)}</td>
+      <td class="num ${invGreenCls}">${fmtCurrencyFull(m.invoiceValue)}</td>
       <td class="num money revenue">${fmtCurrencyFull(m.commission)}</td>
-      <td class="num"><span class="pct-pill ${pctClsFromString(m.commissionPct * 100)}">${(m.commissionPct * 100).toFixed(2)}%</span></td>
+      <td class="num"><span class="pct-pill ${commPillCls}">${commPctValue.toFixed(2)}%</span></td>
       <td class="num">${fmtNum(g.leads)}</td>
     </tr>`;
   });
   const overallCommPct = totals.invoiceValue ? (totals.commission / totals.invoiceValue) * 100 : 0;
+  const totalPillCls = commissionPctClass(overallCommPct);
   html += `<tr class="total-row">
     <td colspan="3"><i class="fas fa-sigma" style="margin-right:6px;font-size:11px;"></i>Total (${sorted.length} garages)</td>
     <td class="num">${fmtCurrencyFull(totals.contract)}</td>
@@ -588,7 +608,7 @@ function renderGarageTable(filtered){
     <td class="num">${fmtNum(totals.invoices)}</td>
     <td class="num">${fmtCurrencyFull(totals.invoiceValue)}</td>
     <td class="num">${fmtCurrencyFull(totals.commission)}</td>
-    <td class="num">${overallCommPct.toFixed(2)}%</td>
+    <td class="num"><span class="pct-pill ${totalPillCls}">${overallCommPct.toFixed(2)}%</span></td>
     <td class="num">${fmtNum(totals.leads)}</td>
   </tr>`;
   body.innerHTML = html;
@@ -659,7 +679,7 @@ function initCharts(){
     data:{
       labels: MONTHS.map(m => m.slice(0,3)),
       datasets:[{
-        label:'Carquire Revenue (₹)',
+        label:'Carqure Revenue (₹)',
         data:[],
         backgroundColor:[],
         borderColor:[],
@@ -846,7 +866,7 @@ function downloadExcel(){
       'Contract Value': g.contract, 'Cleared Net Amount': g.cleared,
       'Outstanding': g.outstanding,
       'Total Invoices': m.invoice, 'Invoice Value': m.invoiceValue,
-      'Carquire Commission': m.commission,
+      'Carqure Commission': m.commission,
       'Commission %': Number((m.commissionPct*100).toFixed(2)),
       'Avg Billing': m.avgBilling, 'Committed Leads': g.leads,
     };
@@ -862,7 +882,7 @@ function downloadExcel(){
     });
     return {
       'Month': m, 'Invoices': inv, 'Invoice Value': val,
-      'Carquire Commission': comm,
+      'Carqure Commission': comm,
       'Avg Billing': inv ? Math.round(val/inv) : 0,
       'Commission %': val ? Number(((comm/val)*100).toFixed(2)) : 0,
     };
