@@ -626,19 +626,158 @@ function getStatusClass(val,type){
   }
   return '';
 }
+
+/* ============================================================
+   GARAGE NAME NORMALIZATION — FIXED
+   Handles all spelling/case variations between the
+   "Overall Summary" sheet and the "WRE Mapping" sheet.
+============================================================= */
 function normalizeGarage(name){
   if(!name) return '';
   let s = String(name).toLowerCase().replace(/[^a-z0-9]/g,'').trim();
+
+  // Comprehensive alias map — maps every observed variation to a canonical key
   const ALIAS = {
-    'jassallcarservice':'jassallcarcare',
-    'srivaikunthmotors':'srivakundmotors',
-    'srivaikundmotors':'srivakundmotors',
-    'duraiautocarrage':'duraiautogarage',
-    'srivaikunth':'srivakundmotors'
+    // Durai Auto (Carrage / Garage)
+    'duraiautocarrage':        'duraiautogarage',
+    'duraiautogarage':         'duraiautogarage',
+    'duraiauto':               'duraiautogarage',
+
+    // Sri Vaikund / Sri Vakund / Sri Vaikunth
+    'srivaikunthmotors':       'srivaikundmotors',
+    'srivaikundmotors':        'srivaikundmotors',
+    'srivakundmotors':         'srivaikundmotors',
+    'srivaikunth':             'srivaikundmotors',
+    'srivaikund':              'srivaikundmotors',
+    'srivakund':               'srivaikundmotors',
+
+    // JASS All Car Service / Care
+    'jassallcarservice':       'jassallcarcare',
+    'jassallcarcare':          'jassallcarcare',
+    'jassallcar':              'jassallcarcare',
+    'jass':                    'jassallcarcare',
+
+    // Shivam Automobiles / Car Service
+    'shivamautomobiles':       'shivamautomobiles',
+    'shivamcarservice':        'shivamcarservice',
+    'shivamcar':               'shivamcarservice',
+
+    // Lokesh Car care / Care
+    'lokeshcarcare':           'lokeshcarcare',
+    'lokeshcar':               'lokeshcarcare',
+    'lokesh':                  'lokeshcarcare',
+
+    // V Care Motors / V care Motors
+    'vcaremotors':             'vcaremotors',
+    'vcare':                   'vcaremotors',
+    'vcareautomotive':         'vcaremotors',
+
+    // 2K Car Care / 2k Car Care
+    '2kcarcare':               '2kcarcare',
+    '2kcar':                   '2kcarcare',
+    '2k':                      '2kcarcare',
+
+    // Sri Sastha Motors
+    'srisasthamotors':         'srisasthamotors',
+    'srisastha':               'srisasthamotors',
+
+    // Murugan Automotive Care
+    'muruganautomotivecare':   'muruganautomotivecare',
+    'muruganautomotive':       'muruganautomotivecare',
+    'murugan':                 'muruganautomotivecare',
+
+    // Doctor Auto Detailing
+    'doctorautodetailing':     'doctorautodetailing',
+    'doctorauto':              'doctorautodetailing',
+
+    // R.K Automobiles
+    'rkautomobiles':           'rkautomobiles',
+    'rkauto':                  'rkautomobiles',
+    'rk':                      'rkautomobiles',
+
+    // Roadrunners Checkpoint
+    'roadrunnerscheckpoint':   'roadrunnerscheckpoint',
+    'roadrunners':             'roadrunnerscheckpoint',
+
+    // Sai Automobiles
+    'saiautomobiles':          'saiautomobiles',
+    'saiauto':                 'saiautomobiles',
+
+    // New Classic Motors
+    'newclassicmotors':        'newclassicmotors',
+    'newclassic':              'newclassicmotors',
+
+    // SPV Motors
+    'spvmotors':               'spvmotors',
+    'spv':                     'spvmotors',
+
+    // Sun Motors
+    'sunmotors':               'sunmotors',
+    'sun':                     'sunmotors',
+
+    // YAC Automotive
+    'yacautomotive':           'yacautomotive',
+    'yac':                     'yacautomotive',
+
+    // Anish Car Care
+    'anishcarcare':            'anishcarcare',
+    'anish':                   'anishcarcare',
+
+    // DSA Car Care
+    'dsacarcare':              'dsacarcare',
+    'dsa':                     'dsacarcare',
+
+    // Narpavi Automotives
+    'narpavautomotives':       'narpavautomotives',
+    'narpavautomotives':       'narpavautomotives',
+    'narpavi':                 'narpavautomotives',
+
+    // Sri Motors
+    'srimotors':               'srimotors',
+    'sri':                     'srimotors',
+
+    // ADDAX Automotive
+    'addaxautomotive':         'addaxautomotive',
+    'addax':                   'addaxautomotive',
+
+    // Gasoline Automotive Solutions
+    'gasolineautomotivesolutions':'gasolineautomotivesolutions',
+    'gasolineautomotive':      'gasolineautomotivesolutions',
+    'gasoline':                'gasolineautomotivesolutions',
+
+    // Global Motors
+    'globalmotors':            'globalmotors',
+    'global':                  'globalmotors',
+
+    // MCC Motors
+    'mccmotors':               'mccmotors',
+    'mcc':                     'mccmotors',
+
+    // Diya Motors
+    'diyamotors':              'diyamotors',
+    'diya':                    'diyamotors',
+
+    // KGR Motors
+    'kgrmotors':               'kgrmotors',
+    'kgr':                     'kgrmotors',
+
+    // Radiant Motors
+    'radiantmotors':           'radiantmotors',
+    'radiant':                 'radiantmotors',
+
+    // Mangai Spark Automotive
+    'mangaisparkautomotive':   'mangaisparkautomotive',
+    'mangaispark':             'mangaisparkautomotive',
+    'mangai':                  'mangaisparkautomotive',
+
+    // Jain Bike Care
+    'jainbikecare':            'jainbikecare',
+    'jain':                    'jainbikecare',
   };
   if(ALIAS[s]) s = ALIAS[s];
   return s;
 }
+
 function getWREForGarage(garage){
   return wreMapping[normalizeGarage(garage)] || null;
 }
@@ -706,6 +845,25 @@ async function syncFromZoho(){
         if(garage && currentWRE) mapping[normalizeGarage(garage)] = currentWRE;
       });
       wreMapping = mapping;
+
+      // ---- DEBUG: log the full mapping (open browser console to verify) ----
+      console.log('%c[WRE Mapping Loaded]', 'color:#2563eb;font-weight:bold', {
+        mappingCount: Object.keys(mapping).length,
+        mapping: mapping
+      });
+
+      // ---- DEBUG: check every garage in the data resolves to a WRE ----
+      const unmapped = {};
+      records.forEach(r => {
+        if(!getWREForGarage(r.garage)) {
+          unmapped[r.garage] = (unmapped[r.garage] || 0) + 1;
+        }
+      });
+      if(Object.keys(unmapped).length){
+        console.warn('%c[Unmapped Garages]', 'color:#dc2626;font-weight:bold', unmapped);
+      } else {
+        console.log('%c[All garages mapped successfully ✓]', 'color:#16a34a;font-weight:bold');
+      }
     }
 
     const dates = Object.keys(allData).sort();
@@ -848,7 +1006,6 @@ function computeLeadAging(){
 function computePendingActions(){
   const all = getAllRecords();
   return all.filter(r => {
-    // In Booking Flow, but pickup OR checkin not done
     if(r.status !== 'In Booking Flow') return false;
     if(r.pickup === 'Picked up' && r.checkin === 'Checked-in') return false;
     return true;
@@ -859,7 +1016,6 @@ function renderPendingActions(){
   const pending = computePendingActions();
   document.getElementById('badgePending').textContent = pending.length;
 
-  // Group by garage + WRE
   const groups = {};
   pending.forEach(r => {
     const w = getWREForGarage(r.garage) || 'Unmapped';
@@ -870,7 +1026,6 @@ function renderPendingActions(){
     groups[key].records.push(r);
   });
 
-  // Summary table
   const body = document.getElementById('pendingSummaryBody');
   const rows = Object.values(groups).sort((a,b) => b.records.length - a.records.length);
   let html = '';
@@ -902,7 +1057,6 @@ function renderPendingActions(){
   </tr>`;
   body.innerHTML = html || '<tr><td colspan="6" class="no-data-msg">No pending actions 🎉</td></tr>';
 
-  // Records table
   const pbody = document.getElementById('pendingBody');
   document.getElementById('pendingRecordsCount').textContent = `${pending.length} records`;
   if(!pending.length){
@@ -944,7 +1098,6 @@ function renderLeadAging(){
     body.innerHTML = `<tr><td colspan="12" class="no-data-msg">No leads to track</td></tr>`;
     return;
   }
-  // Sort by days in current stage desc (oldest stuck first)
   aging.sort((a,b) => b.daysInStage - a.daysInStage);
 
   const stagePill = (d, cls) => d ? `<span class="date-pill ${cls}">${fmtDateShort(d)}</span>` : `<span class="date-pill none">—</span>`;
@@ -1028,7 +1181,6 @@ function renderWREPerformance(){
   </tr>`;
   body.innerHTML = html;
 
-  // WRE → Garage breakdown
   const garBody = document.getElementById('wreGarageBody');
   let ghtml = '';
   keys.forEach(w => {
@@ -1217,12 +1369,10 @@ function renderAnalytics(){
   document.getElementById('analyticsInfo').innerHTML =
     `${dates.length} date${dates.length!==1?'s':''} • ${all.length} total records`;
 
-  // Refresh current sub-tab
   refreshSubTab();
 }
 
 function refreshSubTab(){
-  // Hide all, show current
   document.querySelectorAll('.analytics-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.subnav .sub-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === currentSubTab));
   const map = {
@@ -1759,7 +1909,6 @@ function downloadExcel(){
     records = getAllRecords();
     filename = `booking-report-overall-${todayStr()}.xlsx`;
   } else if(viewMode === 'analytics'){
-    // Export depends on active sub-tab
     if(currentSubTab === 'pending') return downloadPendingExcel();
     if(currentSubTab === 'aging') return downloadAgingExcel();
     if(currentSubTab === 'wre') return downloadWREExcel();
