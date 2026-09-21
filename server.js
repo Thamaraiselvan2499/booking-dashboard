@@ -88,36 +88,35 @@ app.get('/api/data', async (req, res) => {
     console.log("🔄 Fetching fresh JSON data from Zoho...");
     const accessToken = await getAccessToken();
     
-    // The 'method' and 'worksheet_name' parameters must be in the URL query string
-    const summaryUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch&worksheet_name=Overall%20Summary`;
-    const wreUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch&worksheet_name=WRE%20Mapping`;
+    // The resource_id is part of the URL, but 'method' and 'worksheet_name' go in the request body.
+    const apiUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}`;
 
     // Fetch Overall Summary
-    const summaryRes = await axios.post(summaryUrl, {}, {
-      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    const summaryRes = await axios.post(apiUrl, {
+      method: "worksheet.records.fetch",
+      worksheet_name: "Overall Summary"
+    }, {
+      headers: { 
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     // Fetch WRE Mapping
-    const wreRes = await axios.post(wreUrl, {}, {
-      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    const wreRes = await axios.post(apiUrl, {
+      method: "worksheet.records.fetch",
+      worksheet_name: "WRE Mapping"
+    }, {
+      headers: { 
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     // Helper to convert Zoho's response to array-of-objects
     const parseSheetData = (response) => {
-      if (!response.data || !response.data.data) return [];
-      const rows = response.data.data;
-      if (rows.length < 2) return [];
-      const headers = rows[0];
-      const data = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const obj = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index] !== undefined ? row[index] : '';
-        });
-        data.push(obj);
-      }
-      return data;
+      if (!response.data || !response.data.records) return [];
+      return response.data.records;
     };
 
     const summary = parseSheetData(summaryRes);
