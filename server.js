@@ -17,6 +17,11 @@ const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.in';
 
 let refreshToken = process.env.ZOHO_REFRESH_TOKEN || '';
 
+// --- CACHE VARIABLES ---
+let cachedData = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // 1. Redirect user to Zoho for authorization
 app.get('/api/auth', (req, res) => {
   const authUrl = `${ZOHO_ACCOUNTS_URL}/oauth/v2/auth?scope=ZohoSheet.dataAPI.READ&client_id=${ZOHO_CLIENT_ID}&response_type=code&redirect_uri=${ZOHO_REDIRECT_URI}&access_type=offline&prompt=consent`;
@@ -71,13 +76,18 @@ async function getAccessToken() {
   return response.data.access_token;
 }
 
-// 4. Fetch live data from Zoho Sheet using the JSON Data API
+// 4. Fetch live data from Zoho Sheet with Caching
 app.get('/api/data', async (req, res) => {
   try {
-    console.log("🔄 Sync Now clicked. Fetching JSON data from Zoho...");
+    // Check cache first
+    if (cachedData && (Date.now() - lastFetchTime < CACHE_DURATION)) {
+      console.log("⏱️ Returning cached data (Less than 5 mins old)");
+      return res.json(cachedData);
+    }
+
+    console.log("🔄 Fetching fresh JSON data from Zoho...");
     const accessToken = await getAccessToken();
     
-    // The 'method' parameter must be in the URL as a query string for POST requests.
     const summaryUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
     const wreUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
 
@@ -101,9 +111,8 @@ app.get('/api/data', async (req, res) => {
       }
     });
 
-    // Helper to convert Zoho's array-of-arrays response to array-of-objects
+    // Helper to convert Zoho's response to array-of-objects
     const parseSheetData = (response) => {
-      // Zoho's response structure for worksheet.records.fetch
       if (!response.data || !response.data.data) return [];
       const rows = response.data.data;
       if (rows.length < 2) return [];
@@ -123,8 +132,12 @@ app.get('/api/data', async (req, res) => {
     const summary = parseSheetData(summaryRes);
     const wre = parseSheetData(wreRes);
 
-    console.log(`✅ Successfully fetched live JSON data: ${summary.length} summary rows, ${wre.length} WRE rows`);
-    res.json({ summary, wre });
+    // Update Cache
+    cachedData = { summary, wre };
+    lastFetchTime = Date.now();
+
+    console.log(`✅ Successfully fetched live data: ${summary.length} summary rows, ${wre.length} WRE rows`);
+    res.json(cachedData);
 
   } catch (err) {
     console.error('❌ API ERROR:', err.response?.data || err.message);
