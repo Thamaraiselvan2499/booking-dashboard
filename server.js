@@ -20,7 +20,7 @@ let refreshToken = process.env.ZOHO_REFRESH_TOKEN || '';
 // --- CACHE VARIABLES ---
 let cachedData = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // 1. Redirect user to Zoho for authorization
 app.get('/api/auth', (req, res) => {
@@ -88,27 +88,18 @@ app.get('/api/data', async (req, res) => {
     console.log("🔄 Fetching fresh JSON data from Zoho...");
     const accessToken = await getAccessToken();
     
-    const summaryUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
-    const wreUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
+    // The 'method' and 'worksheet_name' parameters must be in the URL query string
+    const summaryUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch&worksheet_name=Overall%20Summary`;
+    const wreUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch&worksheet_name=WRE%20Mapping`;
 
     // Fetch Overall Summary
-    const summaryRes = await axios.post(summaryUrl, {
-      worksheet_name: 'Overall Summary'
-    }, {
-      headers: { 
-        'Authorization': `Zoho-oauthtoken ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+    const summaryRes = await axios.post(summaryUrl, {}, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
     });
 
     // Fetch WRE Mapping
-    const wreRes = await axios.post(wreUrl, {
-      worksheet_name: 'WRE Mapping'
-    }, {
-      headers: { 
-        'Authorization': `Zoho-oauthtoken ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+    const wreRes = await axios.post(wreUrl, {}, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
     });
 
     // Helper to convert Zoho's response to array-of-objects
