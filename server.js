@@ -76,26 +76,34 @@ app.get('/api/data', async (req, res) => {
   try {
     console.log("🔄 Sync Now clicked. Fetching JSON data from Zoho...");
     const accessToken = await getAccessToken();
-    const apiUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}`;
+    
+    // The 'method' parameter must be in the URL as a query string for POST requests.
+    const summaryUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
+    const wreUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?method=worksheet.records.fetch`;
 
     // Fetch Overall Summary
-    const summaryRes = await axios.post(apiUrl, {
-      resource: { type: 'worksheet', name: 'Overall Summary' },
-      method: 'worksheet.read'
+    const summaryRes = await axios.post(summaryUrl, {
+      worksheet_name: 'Overall Summary'
     }, {
-      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+      headers: { 
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     // Fetch WRE Mapping
-    const wreRes = await axios.post(apiUrl, {
-      resource: { type: 'worksheet', name: 'WRE Mapping' },
-      method: 'worksheet.read'
+    const wreRes = await axios.post(wreUrl, {
+      worksheet_name: 'WRE Mapping'
     }, {
-      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+      headers: { 
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     // Helper to convert Zoho's array-of-arrays response to array-of-objects
     const parseSheetData = (response) => {
+      // Zoho's response structure for worksheet.records.fetch
       if (!response.data || !response.data.data) return [];
       const rows = response.data.data;
       if (rows.length < 2) return [];
