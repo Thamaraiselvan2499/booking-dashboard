@@ -1,10 +1,8 @@
 require('dotenv').config();
 const express = require('express');
-const XLSX = require('xlsx');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
-const fs = require('fs');
 
 const app = express();
 app.use(cors());
@@ -19,13 +17,13 @@ const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.in';
 
 let refreshToken = process.env.ZOHO_REFRESH_TOKEN || '';
 
-// 1. Redirect user to Zoho for authorization (Added prompt=consent)
+// 1. Redirect user to Zoho for authorization
 app.get('/api/auth', (req, res) => {
   const authUrl = `${ZOHO_ACCOUNTS_URL}/oauth/v2/auth?scope=ZohoSheet.dataAPI.READ&client_id=${ZOHO_CLIENT_ID}&response_type=code&redirect_uri=${ZOHO_REDIRECT_URI}&access_type=offline&prompt=consent`;
   res.redirect(authUrl);
 });
 
-// 2. Handle the callback from Zoho (Fixed parameter encoding)
+// 2. Handle the callback from Zoho
 app.get('/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) return res.status(400).send('No code provided');
@@ -44,20 +42,23 @@ app.get('/callback', async (req, res) => {
       refreshToken = response.data.refresh_token;
       console.log('✅ Authorization successful! Refresh Token stored.');
       console.log('👉 IMPORTANT: COPY THIS REFRESH TOKEN TO RENDER ENV VARIABLES:', refreshToken);
-      res.send('Authorization successful! Please check the server logs for your Refresh Token and add it to Render Environment Variables as ZOHO_REFRESH_TOKEN.');
+      res.send('Authorization successful! Check the server logs for your Refresh Token.');
     } else {
       console.error('❌ No refresh token returned. Response:', response.data);
-      res.status(500).send('No refresh token returned. Check logs.');
+      res.status(500).send('No refresh token returned.');
     }
   } catch (error) {
     console.error('❌ Error during authorization:', error.response?.data || error.message);
-    res.status(500).send('Authorization failed. Check the server logs.');
+    res.status(500).send('Authorization failed.');
   }
 });
 
-// 3. Get a fresh access token using the refresh token (Fixed parameter encoding)
+// 3. Get a fresh access token using the refresh token
 async function getAccessToken() {
-  if (!refreshToken) throw new Error('No refresh token available. Please visit /api/auth first.');
+  if (!refreshToken) {
+    console.error("❌ ERROR: refreshToken is empty.");
+    throw new Error('No refresh token available.');
+  }
   
   const params = new URLSearchParams();
   params.append('grant_type', 'refresh_token');
@@ -66,37 +67,59 @@ async function getAccessToken() {
   params.append('refresh_token', refreshToken);
 
   const response = await axios.post(`${ZOHO_ACCOUNTS_URL}/oauth/v2/token`, params);
+  console.log("✅ Successfully got new Access Token from Zoho");
   return response.data.access_token;
 }
 
-// 4. Fetch live data from Zoho Sheet
+// 4. Fetch live data from Zoho Sheet using the JSON Data API
 app.get('/api/data', async (req, res) => {
   try {
+    console.log("🔄 Sync Now clicked. Fetching JSON data from Zoho...");
     const accessToken = await getAccessToken();
-    const filePath = path.join(__dirname, 'LiveZohoData.xlsx');
+    const apiUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}`;
 
-    const downloadUrl = `https://sheet.zoho.in/api/v2/${ZOHO_SHEET_ID}?format=xlsx`;
-    const response = await axios.get(downloadUrl, {
-      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` },
-      responseType: 'arraybuffer'
+    // Fetch Overall Summary
+    const summaryRes = await axios.post(apiUrl, {
+      resource: { type: 'worksheet', name: 'Overall Summary' },
+      method: 'worksheet.read'
+    }, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
     });
 
-    fs.writeFileSync(filePath, response.data);
+    // Fetch WRE Mapping
+    const wreRes = await axios.post(apiUrl, {
+      resource: { type: 'worksheet', name: 'WRE Mapping' },
+      method: 'worksheet.read'
+    }, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    });
 
-    const wb = XLSX.readFile(filePath);
-    const summarySheet = wb.Sheets['Overall Summary'];
-    const wreSheet = wb.Sheets['WRE Mapping'];
+    // Helper to convert Zoho's array-of-arrays response to array-of-objects
+    const parseSheetData = (response) => {
+      if (!response.data || !response.data.data) return [];
+      const rows = response.data.data;
+      if (rows.length < 2) return [];
+      const headers = rows[0];
+      const data = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const obj = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index] !== undefined ? row[index] : '';
+        });
+        data.push(obj);
+      }
+      return data;
+    };
 
-    if (!summarySheet) throw new Error('Sheet "Overall Summary" not found.');
-    if (!wreSheet) throw new Error('Sheet "WRE Mapping" not found.');
+    const summary = parseSheetData(summaryRes);
+    const wre = parseSheetData(wreRes);
 
-    const summary = XLSX.utils.sheet_to_json(summarySheet);
-    const wre = XLSX.utils.sheet_to_json(wreSheet);
-
-    console.log(`✅ Successfully fetched live data: ${summary.length} rows`);
+    console.log(`✅ Successfully fetched live JSON data: ${summary.length} summary rows, ${wre.length} WRE rows`);
     res.json({ summary, wre });
+
   } catch (err) {
-    console.error('API ERROR:', err.response?.data || err.message);
+    console.error('❌ API ERROR:', err.response?.data || err.message);
     res.status(500).json({ error: err.message });
   }
 });
